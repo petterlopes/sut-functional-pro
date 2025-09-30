@@ -1,0 +1,12 @@
+receivers:
+  otlp: { protocols: { grpc: {}, http: {} } }
+exporters:
+  logging: { loglevel: debug }
+  # jaeger exporter is not supported by this collector image variant; use zipkin
+  # to send traces to Jaeger HTTP collector instead.
+  zipkin:
+    endpoint: "http://jaeger:14268/api/traces"
+  otlp/tempo: { endpoint: "http://tempo:4317", tls: { insecure: true } }
+service:
+  pipelines:
+    traces: { receivers: [otlp], exporters: [otlp/tempo, zipkin, logging] }

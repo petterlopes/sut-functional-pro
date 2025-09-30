@@ -1,0 +1,128 @@
+{
+  "uid": "sut-http",
+  "title": "SUT API \u2014 HTTP (Axum)",
+  "schemaVersion": 38,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Requests per second",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=\"sut-api\"}[1m]))",
+          "legendFormat": "RPS"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency (p50/p90/p99)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"sut-api\"}[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(http_request_duration_seconds_bucket{job=\"sut-api\"}[5m])) by (le))",
+          "legendFormat": "p90"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"sut-api\"}[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests by status",
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(http_requests_total{job=\"sut-api\"}[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests by route",
+      "targets": [
+        {
+          "expr": "sum by (route) (rate(http_requests_total{job=\"sut-api\"}[5m]))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "5xx rate",
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=\"sut-api\",status=~\"5..\"}[5m]))",
+          "legendFormat": "5xx"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Error ratio %",
+      "targets": [
+        {
+          "expr": "100 * (sum(rate(http_requests_total{job=\"sut-api\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"sut-api\"}[5m])))",
+          "legendFormat": "error %"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency p95 by route",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"sut-api\"}[5m])) by (le, route))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Global build artifacts
+**/target
+**/node_modules
+**/.pnpm-store
+**/dist
+
+# Local tooling
+.git
+.vscode
+.idea
+.DS_Store
+
+# Tests and caches
+.tmp
+coverage

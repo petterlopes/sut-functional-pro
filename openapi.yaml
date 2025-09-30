@@ -1,0 +1,285 @@
+openapi: 3.1.0
+info: { title: SUT Directory API (Rust), version: 1.0.0 }
+servers: [ { url: http://localhost:8080 } ]
+paths:
+  /v1/contacts:
+    get:
+      summary: List contacts
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses: { '200': { description: OK } }
+    post: { summary: Create contact, responses: { '200': { description: OK } } }
+  /v1/contacts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get: { summary: Get contact, responses: { '200': { description: OK } } }
+    patch: { summary: Update contact, responses: { '200': { description: OK } } }
+    delete: { summary: Delete contact, responses: { '204': { description: NoContent } } }
+  /v1/contacts/{id}/document:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get: { summary: Get contact document (scope directory.pii.read), responses: { '200': { description: OK }, '403': { description: Forbidden } } }
+    patch:
+      summary: Update contact document (scope directory.pii.read)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                document:
+                  type: string
+      responses: { '200': { description: OK }, '403': { description: Forbidden } }
+  /v1/search:
+    get:
+      summary: Search
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: autocomplete
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses: { '200': { description: OK } }
+  /v1/org/units:
+    get: { responses: { '200': { description: OK } } }
+  /v1/org/departments:
+    get:
+      parameters:
+        - name: unitId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses: { '200': { description: OK } }
+  /v1/ingestion/events:
+    post: { responses: { '202': { description: Accepted } } }
+  /v1/localidades:
+    get:
+      summary: List localidades
+      responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/LocalidadeList' } } } } }
+    post:
+      summary: Create localidade
+      requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/LocalidadeCreate' } } } }
+      responses: { '201': { description: Created, content: { 'application/json': { schema: { $ref: '#/components/schemas/Localidade' } } } } }
+  /v1/localidades/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/Localidade' } } } } } }
+    patch:
+      requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/LocalidadeUpdate' } } } }
+      responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/Localidade' } } } } }
+    delete: { responses: { '204': { description: NoContent } } }
+
+  /v1/departamentos:
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/DepartamentoList' } } } } } }
+    post:
+      requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/DepartamentoCreate' } } } }
+      responses: { '201': { description: Created, content: { 'application/json': { schema: { $ref: '#/components/schemas/Departamento' } } } } }
+  /v1/departamentos/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/Departamento' } } } } } }
+    patch:
+      requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/DepartamentoUpdate' } } } }
+      responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/Departamento' } } } } }
+    delete: { responses: { '204': { description: NoContent } } }
+
+  /v1/tipos-contato:
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/TipoContatoList' } } } } } }
+  /v1/origens-contato:
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/OrigemContatoList' } } } } } }
+  /v1/ref-origem-contato:
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/RefOrigemList' } } } } } }
+
+  /v1/grupos:
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/GrupoList' } } } } } }
+    post:
+      requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/GrupoCreate' } } } }
+      responses: { '201': { description: Created, content: { 'application/json': { schema: { $ref: '#/components/schemas/Grupo' } } } } }
+  /v1/grupos/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+    patch:
+      requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/GrupoUpdate' } } } }
+      responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/Grupo' } } } } }
+    delete: { responses: { '204': { description: NoContent } } }
+
+  /v1/grupo-membros:
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/GrupoMembrosList' } } } } } }
+    post:
+      requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/GrupoMembroCreate' } } } }
+      responses: { '201': { description: Created } }
+
+  /v1/responsaveis:
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/ResponsaveisList' } } } } } }
+
+  /v1/sites:
+    get: { responses: { '200': { description: OK, content: { 'application/json': { schema: { $ref: '#/components/schemas/SitesList' } } } } } }
+components:
+  schemas:
+    Localidade:
+      type: object
+      properties:
+        incdlocalidade:
+          type: integer
+        txnomelocalidade:
+          type: string
+    LocalidadeList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Localidade'
+    LocalidadeCreate:
+      type: object
+      properties:
+        txnomelocalidade: { type: string }
+    LocalidadeUpdate:
+      type: object
+      properties:
+        txnomelocalidade: { type: string }
+
+    Departamento:
+      type: object
+      properties:
+        incddepartamento: { type: integer }
+        departamento: { type: string }
+    DepartamentoList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Departamento' }
+    DepartamentoCreate:
+      type: object
+      properties:
+        departamento: { type: string }
+    DepartamentoUpdate:
+      type: object
+      properties:
+        departamento: { type: string }
+
+    TipoContato:
+      type: object
+      properties:
+        incdtipocontato: { type: integer }
+        tipo: { type: string }
+        descricao: { type: string }
+    TipoContatoList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TipoContato' }
+
+    OrigemContato:
+      type: object
+      properties:
+        incdorigemcontato: { type: integer }
+        tipo: { type: string }
+        origem: { type: string }
+    OrigemContatoList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrigemContato' }
+
+    RefOrigem:
+      type: object
+      properties:
+        incdreforigcont: { type: integer }
+        descricao: { type: string }
+        formato: { type: string }
+    RefOrigemList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RefOrigem' }
+
+    Grupo:
+      type: object
+      properties:
+        incdgrupo: { type: integer }
+        grupo: { type: string }
+        descricao: { type: string }
+    GrupoList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Grupo' }
+    GrupoCreate:
+      type: object
+      properties:
+        grupo: { type: string }
+    GrupoUpdate:
+      type: object
+      properties:
+        grupo: { type: string }
+
+    GrupoMembro:
+      type: object
+      properties:
+        incdgrupomembro: { type: integer }
+        incdgrupo: { type: integer }
+        idp_user_id: { type: string }
+    GrupoMembrosList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/GrupoMembro' }
+    GrupoMembroCreate:
+      type: object
+      properties:
+        incdgrupo: { type: integer }
+        idp_user_id: { type: string }
+
+    Responsavel:
+      type: object
+      properties:
+        incdrespdepart: { type: integer }
+        incdcontato: { type: integer }
+        incddepartamento: { type: integer }
+        idp_user_id: { type: string }
+    ResponsaveisList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Responsavel' }
+
+    Site:
+      type: object
+      properties:
+        incdsite: { type: integer }
+        site: { type: string }
+        url: { type: string }
+    SitesList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Site' }

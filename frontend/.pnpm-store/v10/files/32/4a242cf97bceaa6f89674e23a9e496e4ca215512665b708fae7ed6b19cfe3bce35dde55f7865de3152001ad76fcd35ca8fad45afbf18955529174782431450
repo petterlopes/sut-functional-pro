@@ -1,0 +1,17 @@
+#!/bin/sh
+basedir=$(dirname "$(echo "$0" | sed -e 's,\\,/,g')")
+
+case `uname` in
+    *CYGWIN*) basedir=`cygpath -w "$basedir"`;;
+esac
+
+if [ -z "$NODE_PATH" ]; then
+  export NODE_PATH="/Users/drew/Sites/drwpow/openapi-typescript/packages/openapi-typescript/bin/node_modules:/Users/drew/Sites/drwpow/openapi-typescript/packages/openapi-typescript/node_modules:/Users/drew/Sites/drwpow/openapi-typescript/packages/node_modules:/Users/drew/Sites/drwpow/openapi-typescript/node_modules:/Users/drew/Sites/drwpow/node_modules:/Users/drew/Sites/node_modules:/Users/drew/node_modules:/Users/node_modules:/node_modules:/Users/drew/Sites/drwpow/openapi-typescript/node_modules/.pnpm/node_modules"
+else
+  export NODE_PATH="/Users/drew/Sites/drwpow/openapi-typescript/packages/openapi-typescript/bin/node_modules:/Users/drew/Sites/drwpow/openapi-typescript/packages/openapi-typescript/node_modules:/Users/drew/Sites/drwpow/openapi-typescript/packages/node_modules:/Users/drew/Sites/drwpow/openapi-typescript/node_modules:/Users/drew/Sites/drwpow/node_modules:/Users/drew/Sites/node_modules:/Users/drew/node_modules:/Users/node_modules:/node_modules:/Users/drew/Sites/drwpow/openapi-typescript/node_modules/.pnpm/node_modules:$NODE_PATH"
+fi
+if [ -x "$basedir/node" ]; then
+  exec "$basedir/node"  "$basedir/../openapi-typescript/bin/cli.js" "$@"
+else
+  exec node  "$basedir/../openapi-typescript/bin/cli.js" "$@"
+fi

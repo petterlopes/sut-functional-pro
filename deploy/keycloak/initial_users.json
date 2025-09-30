@@ -1,0 +1,38 @@
+{
+  "realm": "sut",
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123"
+        }
+      ],
+      "realmRoles": ["directory.read", "directory.write", "directory.pii.read"]
+    },
+    {
+      "username": "manager",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "manager123"
+        }
+      ],
+      "realmRoles": ["directory.read", "directory.write"]
+    },
+    {
+      "username": "analyst",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "analyst123"
+        }
+      ],
+      "realmRoles": ["directory.read"]
+    }
+  ]
+}

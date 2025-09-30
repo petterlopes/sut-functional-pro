@@ -1,0 +1,47 @@
+{
+  "hash": "d0897d13",
+  "browserHash": "4af9a02b",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../../../../../../node_modules/.pnpm/react@18.2.0/node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "76140870",
+      "needsInterop": true
+    },
+    "@tanstack/react-query": {
+      "src": "../../../../../../../node_modules/.pnpm/@tanstack+react-query@4.33.0_react-dom@18.2.0_react@18.2.0/node_modules/@tanstack/react-query/build/lib/index.mjs",
+      "file": "@tanstack_react-query.js",
+      "fileHash": "92399122",
+      "needsInterop": false
+    },
+    "openapi-fetch": {
+      "src": "../../../../../../../node_modules/.pnpm/file+packages+openapi-fetch/node_modules/openapi-fetch/dist/index.js",
+      "file": "openapi-fetch.js",
+      "fileHash": "b17ebffb",
+      "needsInterop": false
+    },
+    "react": {
+      "src": "../../../../../../../node_modules/.pnpm/react@18.2.0/node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "e7e4dd5c",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../../../../../../node_modules/.pnpm/react-dom@18.2.0_react@18.2.0/node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "d790d4a9",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "chunk-SGN5OMQY": {
+      "file": "chunk-SGN5OMQY.js"
+    },
+    "chunk-KXFHRY3Q": {
+      "file": "chunk-KXFHRY3Q.js"
+    },
+    "chunk-UXIASGQL": {
+      "file": "chunk-UXIASGQL.js"
+    }
+  }
+}

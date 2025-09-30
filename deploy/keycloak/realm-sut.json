@@ -1,0 +1,56 @@
+{
+  "realm": "sut",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "sut-frontend",
+      "publicClient": true,
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "*"
+      ],
+      "standardFlowEnabled": true,
+      "protocol": "openid-connect",
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "directory.read"
+      },
+      {
+        "name": "directory.write"
+      },
+      {
+        "name": "directory.merge"
+      },
+      {
+        "name": "directory.pii.read"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "dev",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dev",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "directory.read",
+        "directory.write",
+        "directory.merge",
+        "directory.pii.read"
+      ]
+    }
+  ]
+}
