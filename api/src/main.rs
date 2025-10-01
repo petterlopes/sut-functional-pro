@@ -2,14 +2,11 @@ use std::sync::Arc;
 
 use axum::{
     extract::State,
-    http::{header, HeaderMap, HeaderValue, Method, StatusCode},
+    http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode},
     response::IntoResponse,
     routing::get,
     Router,
 };
-use opentelemetry::{global, trace::TracerProvider, KeyValue};
-use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::{runtime::Tokio, trace::Config as TraceConfig, Resource};
 use tower_http::{
     cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer},
     trace::TraceLayer,
@@ -22,8 +19,9 @@ mod infra {
     pub mod pg;
     pub mod vault;
 }
-mod application {}
-mod domain {}
+mod application;
+mod domain;
+mod infrastructure;
 mod shared;
 
 #[derive(Clone)]
@@ -31,30 +29,17 @@ pub struct AppState {
     pub pg: sqlx::Pool<sqlx::Postgres>,
     pub vault: Option<infra::vault::VaultClient>,
     pub metrics_token: Option<String>,
+    // Clean Architecture repositories
+    pub contact_repository: Arc<infrastructure::repositories::PostgresContactRepository>,
+    pub org_unit_repository: Arc<infrastructure::repositories::PostgresOrgUnitRepository>,
+    pub department_repository: Arc<infrastructure::repositories::PostgresDepartmentRepository>,
+    pub user_repository: Arc<infrastructure::repositories::PostgresUserRepository>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
 
-    // OTel
-    let svc_name = std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "sut-api".into());
-    let otlp_endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
-        .unwrap_or_else(|_| "http://localhost:4317".into());
-
-    let resource = Resource::new(vec![KeyValue::new("service.name", svc_name.clone())]);
-    let tracer_provider = opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_endpoint(otlp_endpoint),
-        )
-        .with_trace_config(TraceConfig::default().with_resource(resource))
-        .install_batch(Tokio)?;
-    let tracer = tracer_provider.tracer(svc_name.clone());
-    let _tracer_provider = tracer_provider;
-    let otel_layer = tracing_opentelemetry::layer().with_tracer(tracer);
 
     let (prometheus_layer, metric_handle) = axum_prometheus::PrometheusMetricLayer::pair();
     let metrics_router = Router::new().route(
@@ -81,7 +66,6 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::registry()
         .with(filter)
         .with(fmt_layer)
-        .with(otel_layer)
         .init();
 
     let dsn =
@@ -121,10 +105,20 @@ async fn main() -> anyhow::Result<()> {
 
     let metrics_token = std::env::var("METRICS_TOKEN").ok();
 
+    // Initialize Clean Architecture repositories
+    let contact_repository = Arc::new(infrastructure::repositories::PostgresContactRepository::new(pg.clone()));
+    let org_unit_repository = Arc::new(infrastructure::repositories::PostgresOrgUnitRepository::new(pg.clone()));
+    let department_repository = Arc::new(infrastructure::repositories::PostgresDepartmentRepository::new(pg.clone()));
+    let user_repository = Arc::new(infrastructure::repositories::PostgresUserRepository::new(pg.clone()));
+
     let state = Arc::new(AppState {
         pg,
         vault,
         metrics_token,
+        contact_repository,
+        org_unit_repository,
+        department_repository,
+        user_repository,
     });
 
     // Spawn a background task to periodically refresh JWKS to keep keys up-to-date
@@ -167,6 +161,7 @@ async fn main() -> anyhow::Result<()> {
         header::AUTHORIZATION,
         header::CONTENT_TYPE,
         header::IF_MATCH,
+        HeaderName::from_static("x-dev-user"),
     ]))
     .allow_credentials(false);
 
@@ -212,6 +207,5 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!(%addr, "listening");
     axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await?;
 
-    global::shutdown_tracer_provider();
     Ok(())
 }

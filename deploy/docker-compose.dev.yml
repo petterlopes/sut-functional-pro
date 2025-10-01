@@ -45,23 +45,6 @@ services:
       - ./vault/setup.sh:/deploy/vault/setup.sh
     depends_on: [vault, postgres]
 
-  otel-collector:
-    image: otel/opentelemetry-collector:0.99.0
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes: [ ./otel-collector.yaml:/etc/otel-collector-config.yaml ]
-    ports: ["4317:4317","4318:4318"]
-
-  jaeger:
-    image: jaegertracing/all-in-one:1.57
-    ports: ["16686:16686","14250:14250"]
-    environment: [ COLLECTOR_ZIPKIN_HOST_PORT=:9411 ]
-
-  tempo:
-    image: grafana/tempo:2.5.0
-    command: ["-config.file=/etc/tempo.yaml"]
-    volumes: [ ./tempo.yaml:/etc/tempo.yaml ]
-    ports: ["3200:3200","4319:4317","4320:4318"]
-
   prometheus:
     image: prom/prometheus:v2.54.1
     command: ["--config.file=/etc/prometheus/prometheus.yml"]
@@ -89,12 +72,10 @@ services:
       KEYCLOAK_AUDIENCE: sut-frontend,account
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN: root
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
-      OTEL_SERVICE_NAME: sut-api
       DEV_AUTH_BYPASS: '0'
     ports: ["8080:8080"]
     restart: "no"
-    depends_on: [postgres, keycloak, vault, vault-setup, otel-collector]
+    depends_on: [postgres, keycloak, vault, vault-setup]
     volumes:
       - ./api/migrations:/app/migrations
 

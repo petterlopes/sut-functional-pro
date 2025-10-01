@@ -6,7 +6,7 @@ COPY api/Cargo.toml api/Cargo.lock ./
 COPY api/migrations ./migrations
 COPY openapi.yaml /openapi.yaml
 COPY api/src ./src
-RUN cargo build --release --locked
+RUN cargo build --release
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*

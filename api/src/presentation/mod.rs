@@ -4,13 +4,9 @@ use std::sync::Arc;
 use tracing::{info_span, Span};
 
 pub mod auth;
-mod contacts;
 mod docs;
 mod health;
-mod ingestion;
-mod org;
-mod search;
-mod admin_stub;
+pub mod clean;
 
 async fn span_enricher(
     req: Request,
@@ -33,9 +29,9 @@ pub fn routes() -> Router<Arc<crate::AppState>> {
         .merge(docs::routes())
         .layer(middleware::from_fn(span_enricher))
         .merge(health::routes())
-        .merge(org::routes().route_layer(middleware::from_fn(auth::jwt_middleware)))
-        .merge(search::routes().route_layer(middleware::from_fn(auth::jwt_middleware)))
-        .merge(ingestion::routes()) // assinado por HMAC; sem JWT
-    .merge(contacts::routes().route_layer(middleware::from_fn(auth::jwt_middleware)))
-    .merge(admin_stub::routes().route_layer(middleware::from_fn(auth::jwt_middleware)))
+        // Clean Architecture routes only
+        .merge(clean::contact_controller::routes().route_layer(middleware::from_fn(auth::jwt_middleware)))
+        .merge(clean::org_unit_controller::routes().route_layer(middleware::from_fn(auth::jwt_middleware)))
+        .merge(clean::department_controller::routes().route_layer(middleware::from_fn(auth::jwt_middleware)))
+        .merge(clean::user_controller::routes().route_layer(middleware::from_fn(auth::jwt_middleware)))
 }

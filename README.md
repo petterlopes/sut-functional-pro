@@ -1,192 +1,399 @@
-```markdown
-# SUT - Sistema Único de Telefonia (Modo de desenvolvimento)
+# SUT - Sistema Único de Telefonia
 
-Este repositório contém um protótipo full-stack (API Rust + Frontend React) e infraestrutura de apoio (Postgres, Keycloak, Vault, Prometheus/Grafana, OTEL Collector, Jaeger/Tempo) para uma solução de diretório corporativo com ingestão assinada e observabilidade.
+[![Rust](https://img.shields.io/badge/Rust-1.84-orange?logo=rust)](https://www.rust-lang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.x-blue?logo=react)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-5.x-purple?logo=vite)](https://vitejs.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?logo=postgresql)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-blue?logo=docker)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Sumário rápido
-- Local dev: `docker compose -f deploy/docker-compose.dev.yml up --build`
-- Frontend dev: `pnpm --prefix frontend dev` (ou `npm run dev --prefix frontend`)
-- API: `cd api && cargo run` (ou via Docker Compose)
+## 🏗️ Arquitetura Clean Architecture
 
-## Estrutura
-- `api/` – backend em Rust (Axum, SQLx). Código, migrations e infra.
-- `frontend/` – SPA React + Vite; usa Keycloak JS Adapter para SSO.
-- `deploy/` – compose e configs (Keycloak realm, OTEL, Grafana dashboards).
-- `openapi.yaml` – contrato OpenAPI; gerador de SDK TypeScript usado pelo frontend.
+Este projeto implementa uma solução completa de diretório corporativo seguindo os princípios de **Clean Architecture**, **Domain-Driven Design (DDD)** e **SOLID**, tanto no backend (Rust) quanto no frontend (React/TypeScript).
 
-## Requisitos
+### 🎯 Visão Geral
+
+O SUT é um sistema full-stack moderno que combina:
+- **Backend**: API REST em Rust com Axum, SQLx e PostgreSQL
+- **Frontend**: SPA React/TypeScript com Vite e Material-UI
+- **Infraestrutura**: PostgreSQL, Keycloak, Vault, Prometheus/Grafana
+
+### 🏛️ Arquitetura do Sistema
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    PRESENTATION LAYER                       │
+├─────────────────────────────────────────────────────────────┤
+│  Frontend (React/TS)    │    Backend (Rust/Axum)           │
+│  - Components           │    - Controllers                 │
+│  - Hooks                │    - Routes                      │
+│  - Pages                │    - Middleware                  │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    APPLICATION LAYER                        │
+├─────────────────────────────────────────────────────────────┤
+│  Frontend (React/TS)    │    Backend (Rust)                │
+│  - Use Cases            │    - Use Cases                   │
+│  - Services             │    - DTOs                        │
+│  - Dependency Injection │    - Application Services        │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      DOMAIN LAYER                           │
+├─────────────────────────────────────────────────────────────┤
+│  Frontend (React/TS)    │    Backend (Rust)                │
+│  - Entities             │    - Entities                    │
+│  - Value Objects        │    - Value Objects               │
+│  - Repository Interfaces│    - Repository Interfaces       │
+│  - Domain Services      │    - Domain Services             │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                  INFRASTRUCTURE LAYER                       │
+├─────────────────────────────────────────────────────────────┤
+│  Frontend (React/TS)    │    Backend (Rust)                │
+│  - API Clients          │    - Repository Implementations  │
+│  - HTTP Services        │    - Database Access             │
+│  - External Services    │    - External Integrations       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 🚀 Início Rápido
+
+### Pré-requisitos
 - Docker & Docker Compose v2
-- Node 18+ (para dev local sem container) e pnpm/npm
+- Node.js 18+ (para desenvolvimento local)
 - Rust (cargo) para desenvolvimento do backend
 
-## Executando localmente (modo recomendado para desenvolvimento)
-1. Subir todo o stack:
+### Executando o Sistema
 
-```powershell
+1. **Subir toda a infraestrutura:**
+```bash
 cd deploy
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-2. Acessos relevantes (ports mapeadas para o host):
-- API: http://localhost:8080
-- Frontend: http://localhost:5173 (Vite) — ver terminal do frontend se a porta estiver em uso (pode cair em 5174).
-- Keycloak (admin UI): http://localhost:8081 (admin/admin)
-- Vault: http://localhost:8200 (token: root)
-- Grafana: http://localhost:3000 (admin/admin)
+2. **Acessos principais:**
+- 🌐 **Frontend**: http://localhost:5173
+- 🔧 **API**: http://localhost:8080
+- 🔐 **Keycloak**: http://localhost:8081 (admin/admin)
+- 📊 **Grafana**: http://localhost:3000 (admin/admin)
+- 🔒 **Vault**: http://localhost:8200 (token: root)
 
-3. Usuários úteis no realm `sut`:
-- admin/admin (Keycloak admin)
-- dev/dev (usuário de desenvolvimento)
+3. **Usuários de desenvolvimento:**
+- `admin/admin` - Administrador do sistema
+- `dev/dev` - Usuário de desenvolvimento
 
-## Variáveis de ambiente importantes
-- Backend (`api` container):
-  - `PG_DSN` – string de conexão com o Postgres
-  - `KEYCLOAK_ISSUER`, `KEYCLOAK_JWKS`, `KEYCLOAK_AUDIENCE` – configurações de validação JWT
-  - `VAULT_ADDR`, `VAULT_TOKEN` – integração com Vault
-  - `METRICS_TOKEN` – cabeçalho exigido em `/metrics` (opcional)
-- Frontend (vite):
-  - `VITE_KC_URL` – URL do Keycloak; para desenvolvimento no host usar `http://localhost:8081`; dentro do Compose usar `http://keycloak:8080`.
-  - `VITE_KC_REALM`, `VITE_KC_CLIENT`, `VITE_API_BASE`
+## 📁 Estrutura do Projeto
 
-Observação: o frontend detecta se `VITE_KC_URL` está presente; caso contrário assume `http://localhost:8081` para evitar problemas de DNS quando o navegador roda no host.
+```
+sut-functional-pro/
+├── api/                          # Backend Rust - Clean Architecture
+│   ├── src/
+│   │   ├── domain/               # Camada de Domínio
+│   │   │   ├── entities.rs       # Entidades de negócio
+│   │   │   ├── value_objects.rs  # Objetos de valor
+│   │   │   ├── repositories.rs   # Interfaces de repositório
+│   │   │   └── errors.rs         # Erros de domínio
+│   │   ├── application/          # Camada de Aplicação
+│   │   │   ├── use_cases/        # Casos de uso
+│   │   │   └── dto.rs            # Data Transfer Objects
+│   │   ├── infrastructure/       # Camada de Infraestrutura
+│   │   │   ├── repositories/     # Implementações de repositório
+│   │   │   └── mappers.rs        # Mapeadores de dados
+│   │   ├── presentation/         # Camada de Apresentação
+│   │   │   ├── clean/            # Controladores Clean Architecture
+│   │   │   └── auth.rs           # Middleware de autenticação
+│   │   └── main.rs               # Ponto de entrada
+│   ├── migrations/               # Migrações do banco de dados
+│   └── Cargo.toml                # Dependências Rust
+├── frontend/                     # Frontend React - Clean Architecture
+│   ├── src/
+│   │   ├── domain/               # Camada de Domínio
+│   │   │   ├── entities/         # Entidades TypeScript
+│   │   │   └── repositories/     # Interfaces de repositório
+│   │   ├── application/          # Camada de Aplicação
+│   │   │   ├── use-cases/        # Casos de uso
+│   │   │   └── services/         # Serviços de aplicação
+│   │   ├── infrastructure/       # Camada de Infraestrutura
+│   │   │   ├── api/              # Clientes HTTP
+│   │   │   └── di/               # Injeção de dependência
+│   │   ├── presentation/         # Camada de Apresentação
+│   │   │   ├── components/       # Componentes React
+│   │   │   ├── pages/            # Páginas
+│   │   │   └── hooks/            # Hooks customizados
+│   │   └── main.tsx              # Ponto de entrada
+│   └── package.json              # Dependências Node.js
+├── deploy/                       # Configurações de deployment
+│   ├── docker-compose.dev.yml    # Compose para desenvolvimento
+│   ├── keycloak/                 # Configurações do Keycloak
+│   └── grafana/                  # Dashboards do Grafana
+└── openapi.yaml                  # Especificação OpenAPI
+```
 
-## Segurança e boas práticas (resumo operativo)
-- Nunca comite segredos (tokens, senhas, chaves privadas) no repositório.
-- Use o Vault para armazenar segredos de produção e leads; em dev o Vault roda em modo dev com token `root` apenas para conveniência.
-- Tokens JWT devem ser validados pelo backend: issuer, audience, exp/nbf/iat e leeway. Há proteção para atualização de JWKS com retry/backoff.
-- Endpoints sensíveis devem registrar auditoria com o actor (`sub` do token).
+## 🔧 Desenvolvimento
 
-## Troubleshooting rápido
-- Se o frontend ficar com mensagem de autenticação travada: verifique `VITE_KC_URL` e se o Keycloak está acessível host:8081
-- Se o API falhar ao iniciar por falha ao obter JWKS: o serviço agora faz retries; verifique logs de startup e conectividade com Keycloak (porta 8081 no host ou `http://keycloak:8080` em Compose).
+### Backend (Rust)
 
-## Testes e CI
-- Backend: `cargo test --locked`
-- Frontend: `pnpm --prefix frontend test` (se houver; no protótipo, use `pnpm --prefix frontend build`)
+#### Estrutura Clean Architecture
 
-## Próximos passos sugeridos (engineer + security)
-1. Adicionar integração contínua (GitHub Actions) com checagens: fmt, clippy, cargo audit, pnpm audit, build verification.
-2. Automatizar provisionamento de Keycloak/Vault em scripts idempotentes. Não confiar em import manual em produção.
-3. Implementar secret scanning (git secrets / pre-commit) e dependabot para dependências.
+**Domain Layer** (`api/src/domain/`):
+- **Entities**: `Contact`, `OrgUnit`, `Department`, `User`
+- **Value Objects**: `ContactId`, `Email`, `Phone`, `OrgUnitId`
+- **Repository Interfaces**: Abstrações para acesso a dados
+- **Domain Errors**: Erros específicos do domínio
+
+**Application Layer** (`api/src/application/`):
+- **Use Cases**: Lógica de negócio isolada
+- **DTOs**: Objetos de transferência de dados
+- **Services**: Serviços de aplicação
+
+**Infrastructure Layer** (`api/src/infrastructure/`):
+- **Repository Implementations**: Implementações concretas
+- **Mappers**: Conversão entre domínio e persistência
+- **External Services**: Integrações externas
+
+**Presentation Layer** (`api/src/presentation/`):
+- **Controllers**: Endpoints REST
+- **Routes**: Definição de rotas
+- **Middleware**: Autenticação, CORS, etc.
+
+#### Comandos Úteis
+
+```bash
+# Executar testes
+cargo test
+
+# Compilar
+cargo build
+
+# Executar localmente
+cargo run
+
+# Verificar código
+cargo clippy
+cargo fmt
+```
+
+### Frontend (React/TypeScript)
+
+#### Estrutura Clean Architecture
+
+**Domain Layer** (`frontend/src/domain/`):
+- **Entities**: Interfaces TypeScript para entidades
+- **Repository Interfaces**: Contratos para acesso a dados
+
+**Application Layer** (`frontend/src/application/`):
+- **Use Cases**: Lógica de aplicação
+- **Services**: Serviços de aplicação
+- **Dependency Injection**: Container de dependências
+
+**Infrastructure Layer** (`frontend/src/infrastructure/`):
+- **API Clients**: Clientes HTTP (Axios)
+- **Repository Implementations**: Implementações concretas
+
+**Presentation Layer** (`frontend/src/presentation/`):
+- **Components**: Componentes React
+- **Pages**: Páginas da aplicação
+- **Hooks**: Hooks customizados
+
+#### Comandos Úteis
+
+```bash
+# Instalar dependências
+npm install
+
+# Executar em desenvolvimento
+npm run dev
+
+# Compilar para produção
+npm run build
+
+# Gerar SDK TypeScript
+npm run gen:sdk
+```
+
+## 🔐 Segurança
+
+### Autenticação e Autorização
+- **Keycloak**: Provedor de identidade OIDC
+- **JWT**: Tokens RS256 com validação de issuer/audience
+- **RBAC**: Controle de acesso baseado em roles
+- **Middleware**: Proteção automática de rotas
+
+### Variáveis de Ambiente
+
+#### Backend
+```bash
+PG_DSN=postgresql://user:pass@localhost:5432/sut
+KEYCLOAK_ISSUER=http://localhost:8081/realms/sut
+KEYCLOAK_JWKS=http://localhost:8081/realms/sut/protocol/openid-connect/certs
+KEYCLOAK_AUDIENCE=sut-api
+VAULT_ADDR=http://localhost:8200
+VAULT_TOKEN=root
+```
+
+#### Frontend
+```bash
+VITE_KC_URL=http://localhost:8081
+VITE_KC_REALM=sut
+VITE_KC_CLIENT=sut-frontend
+VITE_API_BASE=http://localhost:8080
+```
+
+## 📊 Observabilidade
+
+### Métricas
+- **Prometheus**: Coleta de métricas
+- **Grafana**: Dashboards e visualizações
+- **Endpoint**: `/metrics` (protegido por token)
+
+### Logs
+- **Structured Logging**: Logs estruturados em JSON
+- **Correlation IDs**: Rastreamento de requisições
+- **Audit Trail**: Registro de ações críticas
+
+## 🧪 Testes
+
+### Backend
+```bash
+# Executar todos os testes
+cargo test
+
+# Testes com cobertura
+cargo tarpaulin
+
+# Testes de integração
+cargo test --test integration
+```
+
+### Frontend
+```bash
+# Executar testes
+npm test
+
+# Testes com cobertura
+npm run test:coverage
+
+# Testes E2E
+npm run test:e2e
+```
+
+## 🚀 Deployment
+
+### Desenvolvimento
+```bash
+cd deploy
+docker compose -f docker-compose.dev.yml up --build
+```
+
+### Produção
+```bash
+cd deploy
+docker compose -f docker-compose.prod.yml up -d
+```
+
+## 📚 Documentação da API
+
+A API segue a especificação OpenAPI 3.1.0. A documentação está disponível em:
+- **Swagger UI**: http://localhost:8080/docs
+- **OpenAPI Spec**: `openapi.yaml`
+
+### Endpoints Principais
+
+#### Contatos
+- `GET /v1/contacts` - Listar contatos
+- `POST /v1/contacts` - Criar contato
+- `GET /v1/contacts/:id` - Buscar contato
+- `PATCH /v1/contacts/:id` - Atualizar contato
+- `DELETE /v1/contacts/:id` - Remover contato
+- `GET /v1/contacts/statistics` - Estatísticas
+
+#### Unidades Organizacionais
+- `GET /v1/org-units` - Listar unidades
+- `POST /v1/org-units` - Criar unidade
+- `GET /v1/org-units/:id` - Buscar unidade
+- `PATCH /v1/org-units/:id` - Atualizar unidade
+- `DELETE /v1/org-units/:id` - Remover unidade
+
+#### Departamentos
+- `GET /v1/departments` - Listar departamentos
+- `POST /v1/departments` - Criar departamento
+- `GET /v1/departments/:id` - Buscar departamento
+- `PATCH /v1/departments/:id` - Atualizar departamento
+- `DELETE /v1/departments/:id` - Remover departamento
+
+#### Usuários
+- `GET /v1/users` - Listar usuários
+- `POST /v1/users` - Criar usuário
+- `GET /v1/users/:id` - Buscar usuário
+- `PATCH /v1/users/:id` - Atualizar usuário
+- `DELETE /v1/users/:id` - Remover usuário
+
+## 🔧 Troubleshooting
+
+### Problemas Comuns
+
+#### API não inicia
+- Verifique se o PostgreSQL está rodando
+- Confirme as variáveis de ambiente
+- Verifique os logs: `docker logs deploy-api-1`
+
+#### Frontend não carrega
+- Verifique se o Keycloak está acessível
+- Confirme as variáveis `VITE_*`
+- Verifique o console do navegador
+
+#### Autenticação falha
+- Verifique a configuração do Keycloak
+- Confirme os tokens JWT
+- Verifique os logs de autenticação
+
+### Logs Úteis
+```bash
+# Logs da API
+docker logs deploy-api-1 -f
+
+# Logs do Frontend
+docker logs deploy-frontend-1 -f
+
+# Logs do Keycloak
+docker logs deploy-keycloak-1 -f
+```
+
+## 🤝 Contribuição
+
+### Padrões de Código
+
+#### Rust
+- Siga as convenções do `rustfmt`
+- Use `clippy` para linting
+- Escreva testes para novas funcionalidades
+- Documente APIs públicas
+
+#### TypeScript/React
+- Use ESLint e Prettier
+- Siga as convenções do projeto
+- Escreva testes unitários
+- Use TypeScript strict mode
+
+### Fluxo de Desenvolvimento
+1. Fork do repositório
+2. Crie uma branch para sua feature
+3. Implemente seguindo Clean Architecture
+4. Adicione testes
+5. Submeta um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+## 🆘 Suporte
+
+Para suporte e dúvidas:
+- Abra uma issue no GitHub
+- Consulte a documentação da API
+- Verifique os logs do sistema
 
 ---
 
-Consulte `SECURITY.md` para políticas de divulgação e manuseio de segredos.
-
-```
-# SUT - Sistema Funcional Completo
-
-## Visao Geral
-A stack combina backend em Rust (Axum + SQLx), frontend React/Vite e infraestrutura de apoio (PostgreSQL, Keycloak, Vault, Prometheus/Grafana, OTEL Collector, Jaeger, Tempo). O objetivo e servir um diretorio corporativo com ingestao assinada de eventos e observabilidade completa.
-
-## Arquitetura
-- **API (`api/`)**: servico Axum com rastreamento OTLP/Prometheus, pool SQLx, migracoes SQL puras, auditoria e integracao com Vault.
-- **Frontend (`frontend/`)**: SPA Vite/React que consome a API via client gerado automaticamente a partir do `openapi.yaml`.
-- **Seguranca**: Keycloak fornece tokens JWT; a API valida issuer/audience/leeway e aplica autorizacao por escopos. Webhooks usam HMAC armazenado no Vault.
-- **Observabilidade**: metricas expostas em `/metrics`, tracing via OTLP -> Collector -> Jaeger/Tempo, dashboards Grafana.
-
-## Requisitos
-- Docker / Docker Compose v2
-- Portas 5432 (Postgres), 8080, 5173, 8081, 3000, 9090, 16686, 3200 livres
-
-## Subindo o ambiente
-```bash
-cd deploy
-docker compose -f docker-compose.dev.yml up --build
-```
-Servicos expostos:
-- API: http://localhost:8080 (`/metrics` opcionalmente protegido por `METRICS_TOKEN`)
-- Frontend: http://localhost:5173
-- Keycloak: http://localhost:8081 (admin/admin, realm `sut`, usuario `dev/dev`)
-- Vault: http://localhost:8200 (token `root`)
-- Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000 (admin/admin)
-- Jaeger: http://localhost:16686
-- Tempo: http://localhost:3200
-
-## Backend
-### Configuracao (variaveis principais)
-- `PG_DSN`: string de conexao Postgres.
-- `CORS_ALLOWED_ORIGINS`: lista separada por virgulas.
-- `KEYCLOAK_ISSUER` / `KEYCLOAK_JWKS` / `KEYCLOAK_AUDIENCE`: controle de tokens.
-- `JWT_LEEWAY_SECS`: tolerancia em segundos.
-- `METRICS_TOKEN`: exige header `X-Metrics-Token` em `/metrics`.
-- `VAULT_ADDR` / `VAULT_TOKEN`: habilitam acesso a segredos e Transit.
-- `PG_CONNECT_ATTEMPTS` / `PG_CONNECT_BACKOFF_MS`: controle de retry na conexao ao Postgres (default 10 tentativas, 1s).
-
-### Migracoes
-- Arquivo unico `api/migrations/001_init.sql` cria extensoes (`pg_trgm`, `unaccent`, `pgcrypto`), tabelas de diretorio, indices GIN/Trigram, seeds iniciais e estruturas de auditoria/replay.
-- Executadas em runtime pelo `infra::pg::migrate`, garantindo idempotencia.
-
-### Autenticacao e Autorizacao
-1. `presentation::auth::init` carrega JWKS, issuer, audiences e leeway.
-2. `jwt_middleware` protege rotas (`/v1/org`, `/v1/search`, `/v1/contacts`), exige Bearer token RS256 e verifica claims obrigatorias (`exp`, `nbf`, `iat`).
-3. Escopos sao checados por `shared::has_scope`, controlando leitura/escrita e acesso a PII.
-4. O claim `sub` e propagado ao tracing para auditoria.
-
-### Webhooks de Ingestao
-- Endpoint `/v1/ingestion/events` valida HMAC `sha256=` usando segredo hex armazenado no Vault (`kv/webhook`).
-- Janela de 5 minutos (`ts`) e replay protection via tabela `webhook_receipts (source, nonce)`.
-- Respostas: `accepted` ou `duplicate`.
-
-### Auditoria
-- `infra::audit::log_audit` grava acoes com actor (`sub`), antes/depois e timestamp.
-- Operacoes criticas (PATCH de documento) registram eventos.
-
-### Observabilidade
-- `axum_prometheus` serve metricas; TraceLayer e OTLP exportam spans.
-- Dashboards pre-configurados em `deploy/grafana/provisioning`.
-
-## Frontend
-- Scripts principais: `pnpm dev`, `pnpm build`, `pnpm run gen:sdk` (gera client TypeScript via `openapi-typescript`).
-- Ambiente injeta `VITE_KC_URL`, `VITE_KC_REALM`, `VITE_KC_CLIENT`, `VITE_API_BASE`.
-- Componentes requisitam tokens via Keycloak JS Adapter e chamam API com escopos apropriados.
-
-## Documentacao da API
-- Spec OpenAPI em `openapi.yaml` (3.1.0) com rotas de contatos, org, search, ingestao.
-- Frontend gera `src/api/schema.d.ts` automaticamente durante o compose.
-
-## Testes e Builds
-- Backend: `cargo test --locked`, `cargo build --release --locked`.
-- Frontend: `pnpm install && pnpm build` (requer Node/PNPM locais ou container).
-- Docker: `docker build -f api/Dockerfile .` para imagem isolada.
-
-## Fluxos Comuns
-### Obter Token
-1. Acesse Keycloak (`http://localhost:8081`), use client `sut-frontend`.
-2. Realize login via fluxos OAuth suportados e copie o JWT.
-3. Consuma a API: `curl http://localhost:8080/v1/contacts -H "Authorization: Bearer <token>"`.
-
-### Assinar Webhook
-```bash
-body='{"source":"crm-x","sourceKey":"contact:123","payload":{"event":"upsert"},"nonce":"<uuid>","ts":'$(date +%s)'}'
-secret_hex=$(curl -s http://localhost:8200/v1/kv/data/webhook -H 'X-Vault-Token: root' | jq -r '.data.data.secret')
-sig=$(node scripts/sign_webhook.js "$body" "$secret_hex")
-
-curl -i http://localhost:8080/v1/ingestion/events \
-  -H 'Content-Type: application/json' \
-  -H "X-Signature: $sig" \
-  -d "$body"
-```
-
-## Troubleshooting
-- **API nao sobe**: verifique logs; erros comuns sao migracoes especificas do Postgres (necessario `pg_trgm`, `unaccent`, `pgcrypto`).
-- **Prometheus mostra target DOWN**: se a API demorar a conectar em Postgres, ajuste `PG_CONNECT_*`.
-- **Frontend falha em `gen:sdk`**: confirme que o volume `../openapi.yaml:/openapi.yaml:ro` esta montado.
-- **Tokens invalidos**: cheque issuer/audience configurados no Keycloak e variaveis de ambiente do container `api`.
-
-### Runtime overrides (dev)
-
-Quando estiver desenvolvendo com o frontend rodando no seu browser e os outros serviços no Docker, use o painel de configurações (ícone de engrenagem no canto superior direito da UI) para definir overrides em tempo de execução:
-
-- `API base` (localStorage key `sut_api_base`), por exemplo `http://localhost:8080`
-- `Keycloak base` (localStorage key `sut_kc_base`), por exemplo `http://localhost:8081`
-
-Use o botão "Probe" no diálogo para verificar `/health` do backend e a descoberta OIDC do Keycloak. Salvar grava os valores em localStorage e recarrega a página.
-
-Alternativamente, defina `VITE_API_BASE` e `VITE_KC_URL` antes de rodar o dev server (`npm run dev` / `pnpm dev`) para aplicar os valores em tempo de build.
-
-## Proximos Passos
-- Adicionar testes de integracao para contatos/webhooks.
-- Expandir o OpenAPI com schemas de resposta detalhados.
-- Automatizar provisionamento de dados de Keycloak/Vault via scripts idempotentes.
+**Desenvolvido com ❤️ seguindo os princípios de Clean Architecture e Domain-Driven Design**

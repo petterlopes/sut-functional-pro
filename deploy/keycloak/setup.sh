@@ -36,26 +36,26 @@ for role in directory.read directory.write directory.merge directory.pii.read; d
 done
 
 echo "[kc-setup] ensure client sut-frontend"
-CID=""
+CLIENT_ID=""
 OUT=$($KCADM get clients -r sut -q clientId=sut-frontend)
-echo "$OUT" | grep -q 'clientId" : "sut-frontend"' && CID=$(echo "$OUT" | sed -n 's/.*"id" : "\([^"]*\)".*/\1/p') || true
-if [ -z "$CID" ]; then
-  CID=$($KCADM create clients -r sut -s clientId=sut-frontend -s publicClient=true -s protocol=openid-connect -s standardFlowEnabled=true -s enabled=true -i)
+echo "$OUT" | grep -q 'clientId" : "sut-frontend"' && CLIENT_ID=$(echo "$OUT" | sed -n 's/.*"id" : "\([^"]*\)".*/\1/p') || true
+if [ -z "$CLIENT_ID" ]; then
+  CLIENT_ID=$($KCADM create clients -r sut -s clientId=sut-frontend -s publicClient=true -s protocol=openid-connect -s standardFlowEnabled=true -s enabled=true -i)
 fi
-$KCADM update clients/$CID -r sut -s publicClient=true -s enabled=true -s standardFlowEnabled=true -s directAccessGrantsEnabled=false || true
-$KCADM update clients/$CID -r sut -s redirectUris='["http://localhost:5173/*"]' || true
-$KCADM update clients/$CID -r sut -s webOrigins='["*"]' || true
-$KCADM update clients/$CID -r sut -s attributes.'"pkce.code.challenge.method"'=S256 || true
+$KCADM update clients/$CLIENT_ID -r sut -s publicClient=true -s enabled=true -s standardFlowEnabled=true -s directAccessGrantsEnabled=false || true
+$KCADM update clients/$CLIENT_ID -r sut -s redirectUris='["http://localhost:5173/*"]' || true
+$KCADM update clients/$CLIENT_ID -r sut -s webOrigins='["*"]' || true
+$KCADM update clients/$CLIENT_ID -r sut -s attributes.'"pkce.code.challenge.method"'=S256 || true
 
 ensure_user() {
   USERNAME="$1"; PASSWORD="$2"; shift 2; ROLES="$*"
-  UJSON=$($KCADM get users -r sut -q username="$USERNAME")
-  UID=$(echo "$UJSON" | sed -n 's/.*"id" : "\([^"]*\)".*/\1/p')
-  if [ -z "$UID" ]; then
+  USER_JSON=$($KCADM get users -r sut -q username="$USERNAME")
+  USER_ID=$(echo "$USER_JSON" | sed -n 's/.*"id" : "\([^"]*\)".*/\1/p')
+  if [ -z "$USER_ID" ]; then
     echo "[kc-setup] create user $USERNAME"
-    UID=$($KCADM create users -r sut -s username="$USERNAME" -s enabled=true -i)
+    USER_ID=$($KCADM create users -r sut -s username="$USERNAME" -s enabled=true -i)
   else
-    $KCADM update users/$UID -r sut -s enabled=true || true
+    $KCADM update users/$USER_ID -r sut -s enabled=true || true
   fi
   $KCADM set-password -r sut --username "$USERNAME" --new-password "$PASSWORD" --temporary=false || true
   # assign roles

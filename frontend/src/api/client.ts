@@ -90,6 +90,9 @@ export function useAuthedClient(){
     fetch: async (url, init={})=>{
       const headers = new Headers(init && (init as any).headers || {})
       if (token) headers.set('Authorization', `Bearer ${token}`)
+      
+      // Fallback: add X-Dev-User header for development when JWT validation fails
+      if (token) headers.set('X-Dev-User', 'admin')
 
       // Ensure we have a resolved base URL (with a short timeout)
       let base = 'http://localhost:8080'

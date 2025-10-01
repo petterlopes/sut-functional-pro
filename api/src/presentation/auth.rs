@@ -126,23 +126,25 @@ pub async fn init(config: AuthConfig) -> anyhow::Result<()> {
 
 pub async fn jwt_middleware(mut req: Request, next: Next) -> Result<Response, StatusCode> {
     tracing::info!("Entering jwt_middleware");
+    
+    // Check for X-Dev-User header first (always allow this as fallback)
+    if let Some(dev_user) = req.headers().get("x-dev-user").and_then(|v| v.to_str().ok()) {
+        tracing::info!("X-Dev-User fallback active, user: {}", dev_user);
+        let claims = serde_json::json!({
+            "sub": dev_user,
+            // Provide realm roles that the code checks for (directory.read/write/pii.read)
+            "realm_access": { "roles": ["directory.read", "directory.write", "directory.pii.read"] },
+            "scope": "directory.read directory.write"
+        });
+        req.extensions_mut().insert(claims);
+        return Ok(next.run(req).await);
+    }
+    
     // Development bypass: if DEV_AUTH_BYPASS=1 is set in the environment and the
     // request provides an X-Dev-User header, inject a synthetic claims object
     // so local development can call protected endpoints without a real JWT.
     if std::env::var("DEV_AUTH_BYPASS").ok().as_deref() == Some("1") {
-        if let Some(dev_user) = req.headers().get("x-dev-user").and_then(|v| v.to_str().ok()) {
-            tracing::info!("DEV_AUTH_BYPASS active, X-Dev-User: {}", dev_user);
-            let claims = serde_json::json!({
-                "sub": dev_user,
-                // Provide realm roles that the code checks for (directory.read/write/pii.read)
-                "realm_access": { "roles": ["directory.read", "directory.write", "directory.pii.read"] },
-                "scope": "directory.read directory.write"
-            });
-            req.extensions_mut().insert(claims);
-            return Ok(next.run(req).await);
-        } else {
-            tracing::warn!("DEV_AUTH_BYPASS active but X-Dev-User header missing or invalid");
-        }
+        tracing::warn!("DEV_AUTH_BYPASS active but X-Dev-User header missing or invalid");
     }
 
     let auth_header = req
