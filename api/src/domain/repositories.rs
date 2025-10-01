@@ -9,7 +9,10 @@ use crate::domain::value_objects::*;
 #[async_trait]
 pub trait ContactRepository: Send + Sync {
     async fn find_by_id(&self, id: &ContactId) -> Result<Option<Contact>, DomainError>;
-    async fn find_all(&self, criteria: &ContactSearchCriteria) -> Result<ContactSearchResult, DomainError>;
+    async fn find_all(
+        &self,
+        criteria: &ContactSearchCriteria,
+    ) -> Result<ContactSearchResult, DomainError>;
     async fn save(&self, contact: &Contact) -> Result<Contact, DomainError>;
     async fn update(&self, contact: &Contact) -> Result<Contact, DomainError>;
     async fn delete(&self, id: &ContactId) -> Result<(), DomainError>;
@@ -17,7 +20,10 @@ pub trait ContactRepository: Send + Sync {
     async fn find_by_document(&self, document: &str) -> Result<Option<Contact>, DomainError>;
     async fn find_by_name(&self, name: &str) -> Result<Vec<Contact>, DomainError>;
     async fn find_by_unit(&self, unit_id: &OrgUnitId) -> Result<Vec<Contact>, DomainError>;
-    async fn find_by_department(&self, department_id: &DepartmentId) -> Result<Vec<Contact>, DomainError>;
+    async fn find_by_department(
+        &self,
+        department_id: &DepartmentId,
+    ) -> Result<Vec<Contact>, DomainError>;
     async fn count_by_status(&self, status: &ContactStatus) -> Result<i64, DomainError>;
     async fn count_by_type(&self, contact_type: &ContactType) -> Result<i64, DomainError>;
     async fn get_statistics(&self) -> Result<ContactStatistics, DomainError>;
@@ -54,7 +60,10 @@ pub struct ContactStatistics {
 #[async_trait]
 pub trait OrgUnitRepository: Send + Sync {
     async fn find_by_id(&self, id: &OrgUnitId) -> Result<Option<OrgUnit>, DomainError>;
-    async fn find_all(&self, criteria: &OrgUnitSearchCriteria) -> Result<OrgUnitSearchResult, DomainError>;
+    async fn find_all(
+        &self,
+        criteria: &OrgUnitSearchCriteria,
+    ) -> Result<OrgUnitSearchResult, DomainError>;
     async fn save(&self, org_unit: &OrgUnit) -> Result<OrgUnit, DomainError>;
     async fn update(&self, org_unit: &OrgUnit) -> Result<OrgUnit, DomainError>;
     async fn delete(&self, id: &OrgUnitId) -> Result<(), DomainError>;
@@ -82,7 +91,10 @@ pub struct OrgUnitSearchResult {
 #[async_trait]
 pub trait DepartmentRepository: Send + Sync {
     async fn find_by_id(&self, id: &DepartmentId) -> Result<Option<Department>, DomainError>;
-    async fn find_all(&self, criteria: &DepartmentSearchCriteria) -> Result<DepartmentSearchResult, DomainError>;
+    async fn find_all(
+        &self,
+        criteria: &DepartmentSearchCriteria,
+    ) -> Result<DepartmentSearchResult, DomainError>;
     async fn save(&self, department: &Department) -> Result<Department, DomainError>;
     async fn update(&self, department: &Department) -> Result<Department, DomainError>;
     async fn delete(&self, id: &DepartmentId) -> Result<(), DomainError>;
@@ -115,7 +127,10 @@ pub struct DepartmentStatistics {
 #[async_trait]
 pub trait UserRepository: Send + Sync {
     async fn find_by_id(&self, id: &UserId) -> Result<Option<User>, DomainError>;
-    async fn find_all(&self, criteria: &UserSearchCriteria) -> Result<UserSearchResult, DomainError>;
+    async fn find_all(
+        &self,
+        criteria: &UserSearchCriteria,
+    ) -> Result<UserSearchResult, DomainError>;
     async fn save(&self, user: &User) -> Result<User, DomainError>;
     async fn update(&self, user: &User) -> Result<User, DomainError>;
     async fn delete(&self, id: &UserId) -> Result<(), DomainError>;
@@ -143,7 +158,11 @@ pub struct UserSearchResult {
 #[async_trait]
 pub trait AuditEventRepository: Send + Sync {
     async fn save(&self, event: &AuditEvent) -> Result<AuditEvent, DomainError>;
-    async fn find_by_entity(&self, entity_type: &str, entity_id: &str) -> Result<Vec<AuditEvent>, DomainError>;
+    async fn find_by_entity(
+        &self,
+        entity_type: &str,
+        entity_id: &str,
+    ) -> Result<Vec<AuditEvent>, DomainError>;
     async fn find_by_actor(&self, actor_sub: &str) -> Result<Vec<AuditEvent>, DomainError>;
     async fn find_recent(&self, limit: i64) -> Result<Vec<AuditEvent>, DomainError>;
 }
@@ -152,7 +171,11 @@ pub trait AuditEventRepository: Send + Sync {
 #[async_trait]
 pub trait SourceRecordRepository: Send + Sync {
     async fn find_by_id(&self, id: &SourceRecordId) -> Result<Option<SourceRecord>, DomainError>;
-    async fn find_by_source_and_key(&self, source: &str, source_key: &str) -> Result<Option<SourceRecord>, DomainError>;
+    async fn find_by_source_and_key(
+        &self,
+        source: &str,
+        source_key: &str,
+    ) -> Result<Option<SourceRecord>, DomainError>;
     async fn save(&self, record: &SourceRecord) -> Result<SourceRecord, DomainError>;
     async fn delete(&self, id: &SourceRecordId) -> Result<(), DomainError>;
 }
@@ -161,26 +184,44 @@ pub trait SourceRecordRepository: Send + Sync {
 #[async_trait]
 pub trait ContactSourceRepository: Send + Sync {
     async fn save(&self, contact_source: &ContactSource) -> Result<ContactSource, DomainError>;
-    async fn find_by_contact(&self, contact_id: &ContactId) -> Result<Vec<ContactSource>, DomainError>;
-    async fn find_by_source_record(&self, source_record_id: &SourceRecordId) -> Result<Vec<ContactSource>, DomainError>;
-    async fn delete(&self, contact_id: &ContactId, source_record_id: &SourceRecordId) -> Result<(), DomainError>;
+    async fn find_by_contact(
+        &self,
+        contact_id: &ContactId,
+    ) -> Result<Vec<ContactSource>, DomainError>;
+    async fn find_by_source_record(
+        &self,
+        source_record_id: &SourceRecordId,
+    ) -> Result<Vec<ContactSource>, DomainError>;
+    async fn delete(
+        &self,
+        contact_id: &ContactId,
+        source_record_id: &SourceRecordId,
+    ) -> Result<(), DomainError>;
 }
 
 // MergeCandidate Repository
 #[async_trait]
 pub trait MergeCandidateRepository: Send + Sync {
     async fn save(&self, candidate: &MergeCandidate) -> Result<MergeCandidate, DomainError>;
-    async fn find_by_contact(&self, contact_id: &ContactId) -> Result<Vec<MergeCandidate>, DomainError>;
+    async fn find_by_contact(
+        &self,
+        contact_id: &ContactId,
+    ) -> Result<Vec<MergeCandidate>, DomainError>;
     async fn find_top_candidates(&self, limit: i64) -> Result<Vec<MergeCandidate>, DomainError>;
-    async fn delete(&self, contact_a: &ContactId, contact_b: &ContactId) -> Result<(), DomainError>;
+    async fn delete(&self, contact_a: &ContactId, contact_b: &ContactId)
+        -> Result<(), DomainError>;
 }
 
 // MergeDecision Repository
 #[async_trait]
 pub trait MergeDecisionRepository: Send + Sync {
     async fn save(&self, decision: &MergeDecision) -> Result<MergeDecision, DomainError>;
-    async fn find_by_contact(&self, contact_id: &ContactId) -> Result<Vec<MergeDecision>, DomainError>;
-    async fn find_by_decider(&self, decided_by: &UserId) -> Result<Vec<MergeDecision>, DomainError>;
+    async fn find_by_contact(
+        &self,
+        contact_id: &ContactId,
+    ) -> Result<Vec<MergeDecision>, DomainError>;
+    async fn find_by_decider(&self, decided_by: &UserId)
+        -> Result<Vec<MergeDecision>, DomainError>;
 }
 
 // WebhookReceipt Repository

@@ -1,4 +1,4 @@
-FROM rust:1.84 AS build
+FROM rust:1.86 AS build
 WORKDIR /app
 
 # Copy manifest separately to leverage layer caching between builds

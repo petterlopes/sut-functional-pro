@@ -3,7 +3,7 @@ set -eu
 
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://keycloak:8080}"
 KEYCLOAK_USER="${KEYCLOAK_USER:-admin}"
-KEYCLOAK_PASSWORD="${KEYCLOAK_PASSWORD:-admin}"
+KEYCLOAK_PASSWORD="${KEYCLOAK_PASSWORD:-Admin@Keycloak2024!}"
 KCADM=/opt/keycloak/bin/kcadm.sh
 
 retry() {
@@ -22,11 +22,11 @@ if $KCADM get realms/sut >/dev/null 2>&1; then
   echo "[kc-setup] realm sut exists; enabling"
   $KCADM update realms/sut -s enabled=true
 else
-  echo "[kc-setup] create realm sut"
-  $KCADM create realms -s realm=sut -s enabled=true
+  echo "[kc-setup] create realm sut with security settings"
+  $KCADM create realms -s realm=sut -s enabled=true -s sslRequired=external -s registrationAllowed=false -s bruteForceProtected=true -s passwordPolicy="length(12) and digits(2) and lowerCase(2) and upperCase(2) and specialChars(2) and notUsername and notEmail" -s accessTokenLifespan=900 -s ssoSessionIdleTimeout=1800 -s ssoSessionMaxLifespan=36000 -s eventsEnabled=true -s adminEventsEnabled=true
 fi
 
-for role in directory.read directory.write directory.merge directory.pii.read; do
+for role in admin user directory.read directory.write directory.merge directory.pii.read audit.read; do
   if $KCADM get "realms/sut/roles/$role" >/dev/null 2>&1; then
     echo "[kc-setup] role $role ok"
   else
@@ -64,10 +64,9 @@ ensure_user() {
   done
 }
 
-ensure_user dev dev directory.read directory.write directory.merge directory.pii.read
-ensure_user admin admin123 directory.read directory.write directory.pii.read
-ensure_user manager manager123 directory.read directory.write
-ensure_user analyst analyst123 directory.read
+ensure_user admin "Admin@SUT2024!" admin directory.read directory.write directory.merge directory.pii.read audit.read
+ensure_user manager "Manager@SUT2024!" user directory.read directory.write
+ensure_user analyst "Analyst@SUT2024!" user directory.read
 
 echo "[kc-setup] done"
 

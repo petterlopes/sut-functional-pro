@@ -223,14 +223,18 @@ npm run gen:sdk
 ### Variáveis de Ambiente
 
 #### Backend
-```bash
-PG_DSN=postgresql://user:pass@localhost:5432/sut
-KEYCLOAK_ISSUER=http://localhost:8081/realms/sut
-KEYCLOAK_JWKS=http://localhost:8081/realms/sut/protocol/openid-connect/certs
-KEYCLOAK_AUDIENCE=sut-api
-VAULT_ADDR=http://localhost:8200
-VAULT_TOKEN=root
-```
+| Vari?vel | Obrigat?rio em produ??o | Descri??o |
+| --- | --- | --- |
+| `PG_DSN` | Sim | String de conex?o PostgreSQL |
+| `CORS_ALLOWED_ORIGINS` | Sim | Lista de origens permitidas (separadas por v?rgula) |
+| `KEYCLOAK_ISSUER` / `KEYCLOAK_JWKS` / `KEYCLOAK_AUDIENCE` | Sim | Configura??o OIDC para valida??o de JWT |
+| `VAULT_ADDR` | Sim | URL do HashiCorp Vault |
+| `VAULT_TOKEN` | Sim | Token emitido pelo Vault (nunca use o token dev em produ??o) |
+| `METRICS_TOKEN` | Sim | Token compartilhado exigido pelo endpoint `/metrics` |
+| `WEBHOOK_SHARED_SECRET` | Sim | Segredo compartilhado exigido por todos os webhooks |
+| `DEV_AUTH_BYPASS` | N?o | Ative (`1`) apenas em desenvolvimento com `RUST_ENV != production` |
+
+> **Dica**: mantenha os segredos fora do `.env`. Use um gerenciador seguro (Vault, AWS Secrets Manager, etc.) e injete no runtime.
 
 #### Frontend
 ```bash
@@ -240,12 +244,17 @@ VITE_KC_CLIENT=sut-frontend
 VITE_API_BASE=http://localhost:8080
 ```
 
+Observa??es importantes:
+- As senhas de usu?rios de demonstra??o no Keycloak s?o tempor?rias; o primeiro login exige troca imediata.
+- O seed SQL `003_seed_users.sql` s? insere usu?rios de exemplo quando o GUC `app.enable_demo_users` estiver `on`. Produ??es n?o devem habilitar esse flag.
+- `DEV_AUTH_BYPASS=1` apenas injeta claims sint?ticas quando o cabe?alho `X-Dev-User` est? presente e `RUST_ENV` n?o ? `production`.
+
 ## 📊 Observabilidade
 
 ### Métricas
 - **Prometheus**: Coleta de métricas
 - **Grafana**: Dashboards e visualizações
-- **Endpoint**: `/metrics` (protegido por token)
+- **Endpoint**: `/metrics` (requer header `X-Metrics-Token` com `METRICS_TOKEN`)
 
 ### Logs
 - **Structured Logging**: Logs estruturados em JSON

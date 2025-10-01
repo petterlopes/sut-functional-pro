@@ -1,11 +1,14 @@
-use async_trait::async_trait;
-use uuid::Uuid;
 use crate::domain::{
     entities::Department,
-    repositories::{DepartmentRepository, DepartmentSearchCriteria, DepartmentSearchResult, DepartmentStatistics},
-    value_objects::{DepartmentId, OrgUnitId},
     errors::DomainError,
+    repositories::{
+        DepartmentRepository, DepartmentSearchCriteria, DepartmentSearchResult,
+        DepartmentStatistics,
+    },
+    value_objects::{DepartmentId, OrgUnitId},
 };
+use async_trait::async_trait;
+use uuid::Uuid;
 
 pub struct PostgresDepartmentRepository {
     // Placeholder for database connection
@@ -24,7 +27,10 @@ impl DepartmentRepository for PostgresDepartmentRepository {
         Ok(None)
     }
 
-    async fn find_all(&self, criteria: &DepartmentSearchCriteria) -> Result<DepartmentSearchResult, DomainError> {
+    async fn find_all(
+        &self,
+        criteria: &DepartmentSearchCriteria,
+    ) -> Result<DepartmentSearchResult, DomainError> {
         // Placeholder implementation
         Ok(DepartmentSearchResult {
             items: vec![],

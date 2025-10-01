@@ -1,6 +1,8 @@
+import React from 'react'
 import createClient from 'openapi-fetch'
 import type { paths } from './schema'
 import { useAuth } from '../auth/KeycloakProvider'
+import { initializeApiClient, updateApiToken, getApiClient } from './auth'
 
 // Runtime API base resolver: tries a list of candidate base URLs and picks
 // the first that responds to /health. Results are cached in localStorage so
@@ -81,7 +83,26 @@ async function resolveApiBase(){
 }
 
 export function useAuthedClient(){
-  const { token } = useAuth()
+  const { token, authenticated, user, hasRole } = useAuth()
+  
+  // Inicializar cliente de API se necessário
+  React.useEffect(() => {
+    if (token && !getApiClient()) {
+      initializeApiClient({
+        token,
+        onTokenExpired: () => {
+          console.warn('[API] Token expired, redirecting to login');
+          // O KeycloakProvider já trata a expiração do token
+        },
+        onUnauthorized: () => {
+          console.warn('[API] Unauthorized access');
+        }
+      });
+    } else if (token) {
+      updateApiToken(token);
+    }
+  }, [token]);
+
   // Start resolving the API base (async). The fetch wrapper will await it.
   const _ = resolveApiBase()
 
@@ -89,10 +110,20 @@ export function useAuthedClient(){
     baseUrl: 'http://localhost:8080', // placeholder, actual base is rewritten in fetch
     fetch: async (url, init={})=>{
       const headers = new Headers(init && (init as any).headers || {})
-      if (token) headers.set('Authorization', `Bearer ${token}`)
       
-      // Fallback: add X-Dev-User header for development when JWT validation fails
-      if (token) headers.set('X-Dev-User', 'admin')
+      // Adicionar token de autorização
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`)
+      }
+      
+      // Headers de segurança
+      headers.set('X-Requested-With', 'XMLHttpRequest')
+      headers.set('X-Client-Version', '1.0.0')
+      
+      // Fallback para desenvolvimento: adicionar X-Dev-User header
+      if (process.env.NODE_ENV === 'development' && token) {
+        headers.set('X-Dev-User', user?.username || 'admin')
+      }
 
       // Ensure we have a resolved base URL (with a short timeout)
       let base = 'http://localhost:8080'

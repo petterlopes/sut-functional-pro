@@ -7,10 +7,18 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin123"
+          "value": "admin123",
+          "temporary": true
         }
       ],
-      "realmRoles": ["directory.read", "directory.write", "directory.pii.read"]
+      "realmRoles": [
+        "directory.read",
+        "directory.write",
+        "directory.pii.read"
+      ],
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ]
     },
     {
       "username": "manager",
@@ -18,10 +26,17 @@
       "credentials": [
         {
           "type": "password",
-          "value": "manager123"
+          "value": "manager123",
+          "temporary": true
         }
       ],
-      "realmRoles": ["directory.read", "directory.write"]
+      "realmRoles": [
+        "directory.read",
+        "directory.write"
+      ],
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ]
     },
     {
       "username": "analyst",
@@ -29,10 +44,16 @@
       "credentials": [
         {
           "type": "password",
-          "value": "analyst123"
+          "value": "analyst123",
+          "temporary": true
         }
       ],
-      "realmRoles": ["directory.read"]
+      "realmRoles": [
+        "directory.read"
+      ],
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ]
     }
   ]
 }

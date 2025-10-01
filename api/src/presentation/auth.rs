@@ -1,12 +1,104 @@
 use anyhow::Context;
-use axum::{extract::Request, http::StatusCode};
-use axum::{middleware::Next, response::Response};
+use axum::{
+    extract::Request,
+    http::{HeaderMap, HeaderValue, StatusCode},
+    middleware::Next,
+    response::Response,
+};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
 use once_cell::sync::OnceCell;
 use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::time::{sleep, Duration};
+use tracing::{debug, error, info, warn};
+
+/// Claims JWT estruturadas
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct JwtClaims {
+    pub iss: String,         // Issuer
+    pub sub: String,         // Subject (user ID)
+    pub aud: Vec<String>,    // Audience
+    pub exp: u64,            // Expiration time
+    pub iat: u64,            // Issued at
+    pub jti: Option<String>, // JWT ID
+    pub typ: Option<String>, // Token type
+    pub azp: Option<String>, // Authorized party
+    pub session_state: Option<String>,
+    pub realm_access: Option<RealmAccess>,
+    pub resource_access: Option<serde_json::Value>,
+    pub scope: Option<String>,
+    pub sid: Option<String>, // Session ID
+    pub email_verified: Option<bool>,
+    pub name: Option<String>,
+    pub preferred_username: Option<String>,
+    pub given_name: Option<String>,
+    pub family_name: Option<String>,
+    pub email: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RealmAccess {
+    pub roles: Vec<String>,
+}
+
+/// Configuração de segurança JWT
+#[derive(Debug, Clone)]
+pub struct JwtSecurityConfig {
+    pub allowed_algorithms: Vec<Algorithm>,
+    pub max_token_age: u64,
+    pub clock_skew: u64,
+    pub require_audience: bool,
+    pub require_issuer: bool,
+    pub validate_exp: bool,
+    pub validate_nbf: bool,
+}
+
+impl Default for JwtSecurityConfig {
+    fn default() -> Self {
+        Self {
+            allowed_algorithms: vec![Algorithm::RS256, Algorithm::RS384, Algorithm::RS512],
+            max_token_age: 3600, // 1 hora
+            clock_skew: 60,      // 1 minuto
+            require_audience: true,
+            require_issuer: true,
+            validate_exp: true,
+            validate_nbf: true,
+        }
+    }
+}
+
+/// Cache de tokens revogados
+#[derive(Debug, Clone)]
+pub struct TokenBlacklist {
+    tokens: std::sync::Arc<parking_lot::RwLock<HashSet<String>>>,
+}
+
+impl TokenBlacklist {
+    pub fn new() -> Self {
+        Self {
+            tokens: std::sync::Arc::new(parking_lot::RwLock::new(HashSet::new())),
+        }
+    }
+
+    pub fn add(&self, jti: String) {
+        self.tokens.write().insert(jti);
+    }
+
+    pub fn contains(&self, jti: &str) -> bool {
+        self.tokens.read().contains(jti)
+    }
+
+    pub fn remove(&self, jti: &str) {
+        self.tokens.write().remove(jti);
+    }
+
+    pub fn clear_expired(&self, current_time: u64) {
+        // Implementar limpeza de tokens expirados se necessário
+        // Por simplicidade, mantemos todos os tokens por enquanto
+    }
+}
 
 #[derive(Clone)]
 pub struct Jwks {
@@ -32,10 +124,7 @@ impl Jwks {
             attempt += 1;
             match self.http.get(&self.uri).send().await {
                 Ok(resp) => {
-                    let v: serde_json::Value = resp
-                        .json()
-                        .await
-                        .context("parsing JWKS")?;
+                    let v: serde_json::Value = resp.json().await.context("parsing JWKS")?;
                     *self.keys.write() = v;
                     return Ok(());
                 }
@@ -43,7 +132,10 @@ impl Jwks {
                     if attempt >= max_attempts {
                         return Err(e).context(format!("fetching JWKS after {} attempts", attempt));
                     }
-                    eprintln!("[auth] JWKS fetch attempt {} failed: {}. retrying in {:?}", attempt, e, wait);
+                    eprintln!(
+                        "[auth] JWKS fetch attempt {} failed: {}. retrying in {:?}",
+                        attempt, e, wait
+                    );
                     sleep(wait).await;
                     wait = wait * 2;
                     continue;
@@ -68,7 +160,10 @@ impl Jwks {
 pub fn jwks_has_keys() -> bool {
     if let Some(auth_state) = AUTH.get() {
         let keys = auth_state.jwks.keys.read();
-        return keys["keys"].as_array().map(|a| !a.is_empty()).unwrap_or(false);
+        return keys["keys"]
+            .as_array()
+            .map(|a| !a.is_empty())
+            .unwrap_or(false);
     }
     false
 }
@@ -126,25 +221,57 @@ pub async fn init(config: AuthConfig) -> anyhow::Result<()> {
 
 pub async fn jwt_middleware(mut req: Request, next: Next) -> Result<Response, StatusCode> {
     tracing::info!("Entering jwt_middleware");
-    
-    // Check for X-Dev-User header first (always allow this as fallback)
-    if let Some(dev_user) = req.headers().get("x-dev-user").and_then(|v| v.to_str().ok()) {
-        tracing::info!("X-Dev-User fallback active, user: {}", dev_user);
-        let claims = serde_json::json!({
-            "sub": dev_user,
-            // Provide realm roles that the code checks for (directory.read/write/pii.read)
-            "realm_access": { "roles": ["directory.read", "directory.write", "directory.pii.read"] },
-            "scope": "directory.read directory.write"
-        });
-        req.extensions_mut().insert(claims);
-        return Ok(next.run(req).await);
+
+    // Optional development bypass. Only active when DEV_AUTH_BYPASS=1 AND we are not in production.
+    let dev_bypass_enabled = matches!(std::env::var("DEV_AUTH_BYPASS"), Ok(ref v) if v == "1");
+    let is_production =
+        matches!(std::env::var("RUST_ENV"), Ok(ref v) if v.eq_ignore_ascii_case("production"));
+
+    if dev_bypass_enabled && is_production {
+        tracing::warn!("DEV_AUTH_BYPASS=1 ignored because RUST_ENV=production");
     }
-    
-    // Development bypass: if DEV_AUTH_BYPASS=1 is set in the environment and the
-    // request provides an X-Dev-User header, inject a synthetic claims object
-    // so local development can call protected endpoints without a real JWT.
-    if std::env::var("DEV_AUTH_BYPASS").ok().as_deref() == Some("1") {
-        tracing::warn!("DEV_AUTH_BYPASS active but X-Dev-User header missing or invalid");
+
+    if dev_bypass_enabled && !is_production {
+        if let Some(dev_user) = req
+            .headers()
+            .get("x-dev-user")
+            .and_then(|v| v.to_str().ok())
+        {
+            let roles: Vec<String> = req
+                .headers()
+                .get("x-dev-roles")
+                .and_then(|v| v.to_str().ok())
+                .map(|raw| {
+                    raw.split(',')
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .map(str::to_string)
+                        .collect()
+                })
+                .filter(|roles: &Vec<String>| !roles.is_empty())
+                .unwrap_or_else(|| vec!["directory.read".to_string()]);
+
+            tracing::info!(
+                "DEV_AUTH_BYPASS active for synthetic user {} with roles {:?}",
+                dev_user,
+                roles
+            );
+            let scope = roles
+                .iter()
+                .map(|role| role.as_str())
+                .collect::<Vec<_>>()
+                .join(" ");
+            let claims = serde_json::json!({
+                "sub": dev_user,
+                "realm_access": { "roles": roles },
+                "scope": scope,
+            });
+            req.extensions_mut().insert(claims);
+            return Ok(next.run(req).await);
+        } else {
+            tracing::warn!("DEV_AUTH_BYPASS active but X-Dev-User header missing or invalid");
+            return Err(StatusCode::UNAUTHORIZED);
+        }
     }
 
     let auth_header = req
@@ -199,10 +326,8 @@ pub async fn jwt_middleware(mut req: Request, next: Next) -> Result<Response, St
                     }
                 }
                 serde_json::Value::Array(arr) => {
-                    let set: std::collections::HashSet<&str> = arr
-                        .iter()
-                        .filter_map(|v| v.as_str())
-                        .collect();
+                    let set: std::collections::HashSet<&str> =
+                        arr.iter().filter_map(|v| v.as_str()).collect();
                     if auth_state
                         .audiences
                         .iter()
@@ -238,4 +363,171 @@ pub async fn jwt_middleware(mut req: Request, next: Next) -> Result<Response, St
 
     req.extensions_mut().insert(data.claims);
     Ok(next.run(req).await)
+}
+
+/// Middleware para verificar roles específicas
+pub async fn require_role_middleware(
+    required_roles: Vec<String>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // Extrair claims do request
+    let claims = request
+        .extensions()
+        .get::<serde_json::Value>()
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    // Extrair roles do realm_access
+    let user_roles = claims
+        .get("realm_access")
+        .and_then(|ra| ra.get("roles"))
+        .and_then(|roles| roles.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>()
+        })
+        .unwrap_or_default();
+
+    // Verificar se o usuário tem pelo menos uma das roles necessárias
+    let has_required_role = required_roles
+        .iter()
+        .any(|required_role| user_roles.contains(required_role));
+
+    if !has_required_role {
+        let user_id = claims
+            .get("sub")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+        tracing::warn!(
+            user_id = %user_id,
+            user_roles = ?user_roles,
+            required_roles = ?required_roles,
+            "Access denied: insufficient permissions"
+        );
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let user_id = claims
+        .get("sub")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
+    tracing::info!(
+        user_id = %user_id,
+        roles = ?user_roles,
+        "Role-based access granted"
+    );
+
+    Ok(next.run(request).await)
+}
+
+/// Middleware para verificar se o usuário é admin
+pub async fn require_admin_middleware(
+    mut request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    require_role_middleware(vec!["admin".to_string()], request, next).await
+}
+
+/// Middleware para verificar se o usuário pode ler dados
+pub async fn require_read_permission_middleware(
+    mut request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    require_role_middleware(
+        vec!["directory.read".to_string(), "admin".to_string()],
+        request,
+        next,
+    )
+    .await
+}
+
+/// Middleware para verificar se o usuário pode escrever dados
+pub async fn require_write_permission_middleware(
+    mut request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    require_role_middleware(
+        vec!["directory.write".to_string(), "admin".to_string()],
+        request,
+        next,
+    )
+    .await
+}
+
+/// Middleware para verificar se o usuário pode acessar dados PII
+pub async fn require_pii_permission_middleware(
+    mut request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    require_role_middleware(
+        vec!["directory.pii.read".to_string(), "admin".to_string()],
+        request,
+        next,
+    )
+    .await
+}
+
+/// Middleware para verificar se o usuário pode fazer merge de dados
+pub async fn require_merge_permission_middleware(
+    mut request: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    require_role_middleware(
+        vec!["directory.merge".to_string(), "admin".to_string()],
+        request,
+        next,
+    )
+    .await
+}
+
+/// Função auxiliar para extrair user ID das claims
+pub fn extract_user_id(claims: &serde_json::Value) -> Option<String> {
+    claims
+        .get("sub")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
+/// Função auxiliar para extrair username das claims
+pub fn extract_username(claims: &serde_json::Value) -> Option<String> {
+    claims
+        .get("preferred_username")
+        .or_else(|| claims.get("name"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
+/// Função auxiliar para extrair email das claims
+pub fn extract_email(claims: &serde_json::Value) -> Option<String> {
+    claims
+        .get("email")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
+/// Função auxiliar para extrair roles das claims
+pub fn extract_roles(claims: &serde_json::Value) -> Vec<String> {
+    claims
+        .get("realm_access")
+        .and_then(|ra| ra.get("roles"))
+        .and_then(|roles| roles.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.to_string())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Função auxiliar para verificar se o usuário tem uma role específica
+pub fn has_role(claims: &serde_json::Value, role: &str) -> bool {
+    extract_roles(claims).contains(&role.to_string())
+}
+
+/// Função auxiliar para verificar se o usuário é admin
+pub fn is_admin(claims: &serde_json::Value) -> bool {
+    has_role(claims, "admin")
 }

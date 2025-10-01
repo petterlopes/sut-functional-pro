@@ -1,9 +1,9 @@
 use crate::domain::entities::*;
-use crate::domain::value_objects::*;
 use crate::domain::errors::DomainError;
+use crate::domain::value_objects::*;
 use sqlx::FromRow;
-use uuid::Uuid;
 use std::str::FromStr;
+use uuid::Uuid;
 
 // Contact Database Models
 #[derive(Debug, FromRow)]
@@ -137,8 +137,9 @@ pub fn build_contact_with_relations(
 ) -> Result<Contact, DomainError> {
     let contact_type = ContactType::from_str(&contact_row.r#type)
         .map_err(|e| DomainError::InternalError(format!("Invalid contact type from DB: {}", e)))?;
-    let status = ContactStatus::from_str(&contact_row.status)
-        .map_err(|e| DomainError::InternalError(format!("Invalid contact status from DB: {}", e)))?;
+    let status = ContactStatus::from_str(&contact_row.status).map_err(|e| {
+        DomainError::InternalError(format!("Invalid contact status from DB: {}", e))
+    })?;
 
     let emails = email_rows
         .into_iter()
@@ -151,8 +152,9 @@ pub fn build_contact_with_relations(
     let phones = phone_rows
         .into_iter()
         .map(|row| {
-            let phone_type = PhoneType::from_str(&row.r#type)
-                .map_err(|e| DomainError::InternalError(format!("Invalid phone type from DB: {}", e)))?;
+            let phone_type = PhoneType::from_str(&row.r#type).map_err(|e| {
+                DomainError::InternalError(format!("Invalid phone type from DB: {}", e))
+            })?;
             Ok(Phone {
                 e164: row.e164,
                 extension: row.extension,
@@ -194,8 +196,9 @@ pub fn build_org_unit_from_row(row: OrgUnitRow) -> Result<OrgUnit, DomainError> 
 
 // Helper function to build a Department entity from row
 pub fn build_department_from_row(row: DepartmentRow) -> Result<Department, DomainError> {
-    let name = DepartmentName::new(row.name)
-        .map_err(|e| DomainError::InternalError(format!("Invalid department name from DB: {}", e)))?;
+    let name = DepartmentName::new(row.name).map_err(|e| {
+        DomainError::InternalError(format!("Invalid department name from DB: {}", e))
+    })?;
 
     Ok(Department {
         id: DepartmentId(row.id),
@@ -215,7 +218,8 @@ pub fn build_user_from_row(row: UserRow) -> Result<User, DomainError> {
     let password = Password::new(row.password)
         .map_err(|e| DomainError::InternalError(format!("Invalid password from DB: {}", e)))?;
 
-    let roles = row.roles
+    let roles = row
+        .roles
         .into_iter()
         .map(|role_str| Role::new(role_str))
         .collect::<Result<Vec<Role>, String>>()
@@ -280,7 +284,9 @@ pub fn build_contact_source_from_row(row: ContactSourceRow) -> Result<ContactSou
 }
 
 // Helper function to build a MergeCandidate entity from row
-pub fn build_merge_candidate_from_row(row: MergeCandidateRow) -> Result<MergeCandidate, DomainError> {
+pub fn build_merge_candidate_from_row(
+    row: MergeCandidateRow,
+) -> Result<MergeCandidate, DomainError> {
     Ok(MergeCandidate {
         contact_a: ContactId(row.contact_a),
         contact_b: ContactId(row.contact_b),
@@ -291,8 +297,9 @@ pub fn build_merge_candidate_from_row(row: MergeCandidateRow) -> Result<MergeCan
 
 // Helper function to build a MergeDecision entity from row
 pub fn build_merge_decision_from_row(row: MergeDecisionRow) -> Result<MergeDecision, DomainError> {
-    let decision = MergeDecisionType::from_str(&row.decision)
-        .map_err(|e| DomainError::InternalError(format!("Invalid merge decision type from DB: {}", e)))?;
+    let decision = MergeDecisionType::from_str(&row.decision).map_err(|e| {
+        DomainError::InternalError(format!("Invalid merge decision type from DB: {}", e))
+    })?;
 
     Ok(MergeDecision {
         primary_contact: ContactId(row.primary_contact),
@@ -305,7 +312,9 @@ pub fn build_merge_decision_from_row(row: MergeDecisionRow) -> Result<MergeDecis
 }
 
 // Helper function to build a WebhookReceipt entity from row
-pub fn build_webhook_receipt_from_row(row: WebhookReceiptRow) -> Result<WebhookReceipt, DomainError> {
+pub fn build_webhook_receipt_from_row(
+    row: WebhookReceiptRow,
+) -> Result<WebhookReceipt, DomainError> {
     let source = Source::new(row.source)
         .map_err(|e| DomainError::InternalError(format!("Invalid source from DB: {}", e)))?;
     let nonce = Nonce::new(row.nonce)

@@ -1,11 +1,11 @@
-use async_trait::async_trait;
-use uuid::Uuid;
 use crate::domain::{
     entities::OrgUnit,
+    errors::DomainError,
     repositories::{OrgUnitRepository, OrgUnitSearchCriteria, OrgUnitSearchResult},
     value_objects::OrgUnitId,
-    errors::DomainError,
 };
+use async_trait::async_trait;
+use uuid::Uuid;
 
 pub struct PostgresOrgUnitRepository {
     // Placeholder for database connection
@@ -24,7 +24,10 @@ impl OrgUnitRepository for PostgresOrgUnitRepository {
         Ok(None)
     }
 
-    async fn find_all(&self, criteria: &OrgUnitSearchCriteria) -> Result<OrgUnitSearchResult, DomainError> {
+    async fn find_all(
+        &self,
+        criteria: &OrgUnitSearchCriteria,
+    ) -> Result<OrgUnitSearchResult, DomainError> {
         // Placeholder implementation
         Ok(OrgUnitSearchResult {
             items: vec![],

@@ -25,10 +25,15 @@ pub enum DomainError {
 impl From<sqlx::Error> for DomainError {
     fn from(err: sqlx::Error) -> Self {
         match err {
-            sqlx::Error::RowNotFound => DomainError::NotFound("Entity not found in database".to_string()),
+            sqlx::Error::RowNotFound => {
+                DomainError::NotFound("Entity not found in database".to_string())
+            }
             sqlx::Error::Database(db_err) => {
                 if db_err.constraint().is_some() {
-                    DomainError::Conflict(format!("Database constraint violation: {}", db_err.message()))
+                    DomainError::Conflict(format!(
+                        "Database constraint violation: {}",
+                        db_err.message()
+                    ))
                 } else {
                     DomainError::DatabaseError(db_err.message().to_string())
                 }

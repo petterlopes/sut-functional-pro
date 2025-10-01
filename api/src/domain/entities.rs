@@ -1,9 +1,9 @@
-use std::fmt;
-use std::str::FromStr;
-use crate::domain::value_objects::*;
 use crate::domain::errors::DomainError;
+use crate::domain::value_objects::*;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::str::FromStr;
 use uuid::Uuid;
 
 // Contact Entity
@@ -35,7 +35,9 @@ impl Contact {
         phones: Vec<Phone>,
     ) -> Result<Self, DomainError> {
         if full_name.trim().is_empty() {
-            return Err(DomainError::ValidationError("Full name cannot be empty".to_string()));
+            return Err(DomainError::ValidationError(
+                "Full name cannot be empty".to_string(),
+            ));
         }
 
         Ok(Contact {
@@ -56,7 +58,9 @@ impl Contact {
 
     pub fn update_full_name(&mut self, full_name: String) -> Result<(), DomainError> {
         if full_name.trim().is_empty() {
-            return Err(DomainError::ValidationError("Full name cannot be empty".to_string()));
+            return Err(DomainError::ValidationError(
+                "Full name cannot be empty".to_string(),
+            ));
         }
         self.full_name = full_name;
         self.etag = Uuid::new_v4().to_string();
@@ -96,7 +100,10 @@ impl Contact {
 
     pub fn add_email(&mut self, email: Email) -> Result<(), DomainError> {
         if self.emails.iter().any(|e| e.value == email.value) {
-            return Err(DomainError::Conflict(format!("Email {} already exists", email.value)));
+            return Err(DomainError::Conflict(format!(
+                "Email {} already exists",
+                email.value
+            )));
         }
         if email.is_primary {
             self.emails.iter_mut().for_each(|e| e.is_primary = false);
@@ -109,7 +116,10 @@ impl Contact {
 
     pub fn add_phone(&mut self, phone: Phone) -> Result<(), DomainError> {
         if self.phones.iter().any(|p| p.e164 == phone.e164) {
-            return Err(DomainError::Conflict(format!("Phone {} already exists", phone.e164)));
+            return Err(DomainError::Conflict(format!(
+                "Phone {} already exists",
+                phone.e164
+            )));
         }
         if phone.is_primary {
             self.phones.iter_mut().for_each(|p| p.is_primary = false);
@@ -231,12 +241,7 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(
-        username: Username,
-        email: UserEmail,
-        password: Password,
-        roles: Vec<Role>,
-    ) -> Self {
+    pub fn new(username: Username, email: UserEmail, password: Password, roles: Vec<Role>) -> Self {
         User {
             id: UserId::new(),
             username,
@@ -357,9 +362,15 @@ pub struct ContactSource {
 }
 
 impl ContactSource {
-    pub fn new(contact_id: ContactId, source_record_id: SourceRecordId, confidence: f64) -> Result<Self, DomainError> {
+    pub fn new(
+        contact_id: ContactId,
+        source_record_id: SourceRecordId,
+        confidence: f64,
+    ) -> Result<Self, DomainError> {
         if confidence < 0.0 || confidence > 1.0 {
-            return Err(DomainError::ValidationError("Confidence must be between 0.0 and 1.0".to_string()));
+            return Err(DomainError::ValidationError(
+                "Confidence must be between 0.0 and 1.0".to_string(),
+            ));
         }
         Ok(ContactSource {
             contact_id,
@@ -379,9 +390,16 @@ pub struct MergeCandidate {
 }
 
 impl MergeCandidate {
-    pub fn new(contact_a: ContactId, contact_b: ContactId, score: f64, features: serde_json::Value) -> Result<Self, DomainError> {
+    pub fn new(
+        contact_a: ContactId,
+        contact_b: ContactId,
+        score: f64,
+        features: serde_json::Value,
+    ) -> Result<Self, DomainError> {
         if score < 0.0 || score > 1.0 {
-            return Err(DomainError::ValidationError("Score must be between 0.0 and 1.0".to_string()));
+            return Err(DomainError::ValidationError(
+                "Score must be between 0.0 and 1.0".to_string(),
+            ));
         }
         Ok(MergeCandidate {
             contact_a,

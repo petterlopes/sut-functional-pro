@@ -1,33 +1,59 @@
 import React from 'react'
 import Keycloak from 'keycloak-js'
-type Ctx = { token: string | null, login: ()=>void, logout: ()=>void, ready: boolean }
-const Ctx = React.createContext<Ctx>({ token: null, login: ()=>{}, logout: ()=>{}, ready: false })
-export const useAuth = ()=> React.useContext(Ctx)
+
+// Tipos de contexto de autenticação
+type AuthContext = { 
+  token: string | null
+  login: () => void
+  logout: () => void
+  ready: boolean
+  authenticated: boolean
+  user: KeycloakUser | null
+  roles: string[]
+  hasRole: (role: string) => boolean
+  hasAnyRole: (roles: string[]) => boolean
+  isAdmin: () => boolean
+}
+
+type KeycloakUser = {
+  id: string
+  username: string
+  email?: string
+  firstName?: string
+  lastName?: string
+  roles: string[]
+}
+
+const AuthContext = React.createContext<AuthContext>({ 
+  token: null, 
+  login: () => {}, 
+  logout: () => {}, 
+  ready: false,
+  authenticated: false,
+  user: null,
+  roles: [],
+  hasRole: () => false,
+  hasAnyRole: () => false,
+  isAdmin: () => false
+})
+
+export const useAuth = () => React.useContext(AuthContext)
 export function KeycloakProvider({ children }: { children: React.ReactNode }){
-  const kc = React.useMemo(()=> {
-    // Prefer explicit env (Vite injects VITE_* at build/dev time). When not set,
-    // choose a host-friendly default for local browser development (localhost:8081).
-    // Inside docker-compose the frontend will have VITE_KC_URL set to the service
-    // name (http://keycloak:8080) so that the dev server in the container can reach it.
-  const envUrl = (import.meta as any).env?.VITE_KC_URL
-  // Allow a runtime override from localStorage (set by the RuntimeConfig UI)
-  let runtimeOverride: string | null = null
-  try{ runtimeOverride = localStorage.getItem('sut_kc_base') }catch(e){}
-  // If VITE_KC_URL is provided (containerized runs) use it. Otherwise prefer
-  // a host-friendly default (localhost:8081) so the browser doesn't attempt
-  // to resolve the Docker service name `keycloak` which causes DNS errors
-  // like DNS_PROBE_POSSIBLE when the frontend is opened from the host.
-  // When a developer sets VITE_KC_URL to a Docker service hostname (e.g.
-  // http://keycloak:8080) but the app is opened in a host browser, rewrite
-  // that hostname to localhost:8081 so the browser can reach Keycloak on the
-  // mapped host port. If you run entirely inside a container network where
-  // service names resolve, set VITE_KC_URL accordingly in the compose env.
-  const defaultHost = 'http://localhost:8081'
-  let inferred = runtimeOverride || envUrl || defaultHost
-  try{
-    // If the inferred URL points at a Docker service name like `keycloak`
-    // and we're running inside a host browser (window.location.hostname != 'keycloak'),
-    // rewrite the host to localhost:8081 so the browser can reach Keycloak.
+  const kc = React.useMemo(() => {
+    // Configuração de segurança do Keycloak
+    const envUrl = (import.meta as any).env?.VITE_KC_URL
+    let runtimeOverride: string | null = null
+    try { 
+      runtimeOverride = localStorage.getItem('sut_kc_base') 
+    } catch(e) {
+      console.warn('Failed to read runtime override from localStorage:', e)
+    }
+    
+    const defaultHost = 'http://localhost:8081'
+    let inferred = runtimeOverride || envUrl || defaultHost
+    
+    try {
+      // Rewrite Docker service names to localhost for host browser access
     if (inferred.includes('keycloak') && typeof window !== 'undefined' && window.location && window.location.hostname !== 'keycloak'){
       const urlObj = new URL(inferred)
       urlObj.hostname = 'localhost'
@@ -43,11 +69,24 @@ export function KeycloakProvider({ children }: { children: React.ReactNode }){
   return new Keycloak({
     url: inferred,
     realm: env.VITE_KC_REALM || 'sut',
-    clientId: env.VITE_KC_CLIENT || 'sut-frontend'
+    clientId: env.VITE_KC_CLIENT || 'sut-frontend',
+    // Configurações de segurança
+    enableLogging: process.env.NODE_ENV === 'development',
+    checkLoginIframe: false, // Desabilitar para melhor performance
+    checkLoginIframeInterval: 5, // Verificar a cada 5 segundos se necessário
+    onLoad: 'check-sso', // Verificar SSO automaticamente
+    silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+    pkceMethod: 'S256', // Usar PKCE com SHA256
+    flow: 'standard', // Usar Authorization Code Flow
+    responseMode: 'fragment', // Usar fragment mode para segurança
+    scope: 'openid profile email', // Escopo mínimo necessário
   })
   }, [])
   const [ready, setReady] = React.useState(false)
   const [token, setToken] = React.useState<string|null>(null)
+  const [authenticated, setAuthenticated] = React.useState(false)
+  const [user, setUser] = React.useState<KeycloakUser | null>(null)
+  const [roles, setRoles] = React.useState<string[]>([])
   React.useEffect(()=>{
     console.debug('[KeycloakProvider] initializing Keycloak with url=', kc.authServerUrl)
     let mounted = true
@@ -58,18 +97,61 @@ export function KeycloakProvider({ children }: { children: React.ReactNode }){
       while(mounted && attempt < maxAttempts){
         attempt++
         try{
-          const auth = await kc.init({ onLoad: 'check-sso', pkceMethod: 'S256', silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html' })
+          const auth = await kc.init({ 
+            onLoad: 'check-sso', 
+            pkceMethod: 'S256', 
+            silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+            checkLoginIframe: false,
+            enableLogging: process.env.NODE_ENV === 'development'
+          })
           console.debug('[KeycloakProvider] kc.init resolved, authenticated=', auth)
-          if (auth) setToken(kc.token!)
+          
+          if (auth && kc.authenticated) {
+            setToken(kc.token!)
+            setAuthenticated(true)
+            
+            // Extrair informações do usuário
+            if (kc.tokenParsed) {
+              const userRoles = kc.tokenParsed.realm_access?.roles || []
+              const userInfo: KeycloakUser = {
+                id: kc.tokenParsed.sub || '',
+                username: kc.tokenParsed.preferred_username || kc.tokenParsed.name || '',
+                email: kc.tokenParsed.email,
+                firstName: kc.tokenParsed.given_name,
+                lastName: kc.tokenParsed.family_name,
+                roles: userRoles
+              }
+              setUser(userInfo)
+              setRoles(userRoles)
+            }
+          } else {
+            setAuthenticated(false)
+            setUser(null)
+            setRoles([])
+          }
+          
           // DEV helper: expose current token to window for quick debugging from the browser console
-          try{ if (typeof window !== 'undefined') (window as any).__SUT_TOKEN = kc.token }catch(e){}
           setReady(true)
           const id = setInterval(async ()=>{
             try{
               const refreshed = await kc.updateToken(60)
-              if (refreshed && kc.token) setToken(kc.token)
-              try{ if (typeof window !== 'undefined') (window as any).__SUT_TOKEN = kc.token }catch(e){}
-            }catch(e){
+              if (refreshed && kc.token) {
+                setToken(kc.token)
+                setAuthenticated(true)
+                
+                // Atualizar informações do usuário se necessário
+                if (kc.tokenParsed) {
+                  const userRoles = kc.tokenParsed.realm_access?.roles || []
+                  setRoles(userRoles)
+                  if (user) {
+                    setUser({
+                      ...user,
+                      roles: userRoles
+                    })
+                  }
+                }
+              }
+                }catch(e){
               // ignore refresh errors
             }
           }, 30000)
@@ -99,5 +181,41 @@ export function KeycloakProvider({ children }: { children: React.ReactNode }){
     }
     return kc.login({ redirectUri: window.location.href })
   }
-  return <Ctx.Provider value={{ token, login, logout: ()=>kc.logout({ redirectUri: window.location.origin }), ready }}>{children}</Ctx.Provider>
+  const logout = () => {
+    setToken(null)
+    setAuthenticated(false)
+    setUser(null)
+    setRoles([])
+    return kc.logout({ redirectUri: window.location.origin })
+  }
+
+  // Funções auxiliares para verificação de roles
+  const hasRole = React.useCallback((role: string) => {
+    return roles.includes(role)
+  }, [roles])
+
+  const hasAnyRole = React.useCallback((requiredRoles: string[]) => {
+    return requiredRoles.some(role => roles.includes(role))
+  }, [roles])
+
+  const isAdmin = React.useCallback(() => {
+    return hasRole('admin')
+  }, [hasRole])
+
+  return (
+    <AuthContext.Provider value={{ 
+      token, 
+      login, 
+      logout, 
+      ready, 
+      authenticated,
+      user,
+      roles,
+      hasRole,
+      hasAnyRole,
+      isAdmin
+    }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }

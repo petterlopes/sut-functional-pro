@@ -1,0 +1,54 @@
+SUT System Security Report
+Generated: Wed Oct  1 02:57:58 PM -03 2025
+================================
+
+System Information:
+- OS: Linux
+- Kernel: 6.6.87.2-microsoft-standard-WSL2
+- Docker Version: Docker version 28.4.0, build d8eb465
+- User: petterlopes
+
+Security Configuration:
+- Vault: Enhanced configuration with audit logging
+- Keycloak: Strong password policy, brute force protection
+- PostgreSQL: SCRAM-SHA-256 authentication
+- Network: Restricted port exposure
+
+File Permissions:
+deploy/keycloak/:
+total 24
+drwxrwxrwx 1 petterlopes petterlopes  512 Oct  1 14:56 .
+drwxrwxrwx 1 petterlopes petterlopes  512 Oct  1 14:57 ..
+-rwxrwxrwx 1 petterlopes petterlopes  784 Sep 29 21:38 initial_users.json
+-rwxrwxrwx 1 petterlopes petterlopes 1115 Oct  1 14:56 keycloak-security.conf
+-rwxrwxrwx 1 petterlopes petterlopes 8449 Oct  1 10:50 realm-sut.json
+-rwxrwxrwx 1 petterlopes petterlopes 3212 Oct  1 14:55 setup.sh
+
+deploy/postgres/:
+total 12
+drwxrwxrwx 1 petterlopes petterlopes  512 Oct  1 14:56 .
+drwxrwxrwx 1 petterlopes petterlopes  512 Oct  1 14:57 ..
+-rwxrwxrwx 1 petterlopes petterlopes 1174 Oct  1 14:56 init-keycloak-db.sql
+-rwxrwxrwx 1 petterlopes petterlopes 1776 Oct  1 10:50 pg_hba.conf
+-rwxrwxrwx 1 petterlopes petterlopes 2544 Oct  1 13:41 postgresql.conf
+
+deploy/vault/:
+total 16
+drwxrwxrwx 1 petterlopes petterlopes  512 Oct  1 11:02 .
+drwxrwxrwx 1 petterlopes petterlopes  512 Oct  1 14:57 ..
+-rwxrwxrwx 1 petterlopes petterlopes 9442 Oct  1 14:53 setup.sh
+-rwxrwxrwx 1 petterlopes petterlopes 2224 Oct  1 14:52 vault.hcl
+
+Docker Configuration:
+- Services: 1
+- Networks: 10
+- Volumes: 10
+
+Security Recommendations:
+1. Use TLS/SSL in production
+2. Enable firewall rules
+3. Regular security updates
+4. Monitor audit logs
+5. Use secrets management
+6. Implement backup strategies
+

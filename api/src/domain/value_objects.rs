@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
+use uuid::Uuid;
 
 // Common Value Objects
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -80,11 +80,21 @@ pub struct Phone {
 }
 
 impl Phone {
-    pub fn new(e164: String, extension: Option<String>, phone_type: PhoneType, is_primary: bool) -> Result<Self, String> {
+    pub fn new(
+        e164: String,
+        extension: Option<String>,
+        phone_type: PhoneType,
+        is_primary: bool,
+    ) -> Result<Self, String> {
         if e164.is_empty() {
             return Err("E164 phone number cannot be empty".to_string());
         }
-        Ok(Phone { e164, extension, phone_type, is_primary })
+        Ok(Phone {
+            e164,
+            extension,
+            phone_type,
+            is_primary,
+        })
     }
 }
 

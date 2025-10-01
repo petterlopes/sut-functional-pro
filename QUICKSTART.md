@@ -58,22 +58,28 @@ Quando todos os serviços estiverem prontos, acesse:
 |---------|-----|-------------|
 | **Frontend** | http://localhost:5173 | - |
 | **API** | http://localhost:8080 | - |
-| **Keycloak** | http://localhost:8081 | admin / admin |
+| **Keycloak** | http://localhost:8081 | admin / Admin@Keycloak2024! |
 | **Grafana** | http://localhost:3000 | admin / admin |
 | **Prometheus** | http://localhost:9090 | - |
-| **Vault** | http://localhost:8200 | Token: root |
+| **Vault** | http://localhost:8200 | Token: dev-root-token |
+
+> **Dica**: o endpoint `/metrics` exige `X-Metrics-Token: dev-metrics-token`. Webhooks locais devem enviar `X-Webhook-Token: dev-shared-webhook-token`. Configure `CORS_ALLOWED_ORIGINS` antes de qualquer deploy real.
+
+> Para que a API popular usuários de exemplo, habilite o GUC `app.enable_demo_users` antes da primeira execução das migrações (por exemplo, via `ALTER DATABASE sut SET app.enable_demo_users = 'on';`).
 
 ### 5️⃣ Faça Login
 
 No frontend (http://localhost:5173), clique em **"Fazer Login"** e use:
 
-**Usuários de Teste:**
+**Usuários de Teste (Keycloak):**
 
 | Usuário | Senha | Papel |
 |---------|-------|-------|
-| admin | admin | Administrador |
-| user | user | Usuário |
-| viewer | viewer | Visualizador |
+| admin | admin123 (temporário) | Administrador |
+| manager | manager123 (temporário) | Gestor |
+| analyst | analyst123 (temporário) | Analista |
+
+> O Keycloak exige troca imediata de senha para essas contas. O primeiro login redireciona para a tela de atualização.
 
 ### 6️⃣ Explore o Sistema
 

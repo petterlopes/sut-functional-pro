@@ -1,9 +1,9 @@
-use std::str::FromStr;
+use crate::application::dto::*;
 use crate::domain::entities::Contact;
+use crate::domain::errors::DomainError;
 use crate::domain::repositories::{ContactRepository, ContactSearchCriteria};
 use crate::domain::value_objects::*;
-use crate::domain::errors::DomainError;
-use crate::application::dto::*;
+use std::str::FromStr;
 
 pub struct CreateContactUseCase<'a> {
     contact_repository: &'a dyn ContactRepository,
@@ -14,7 +14,10 @@ impl<'a> CreateContactUseCase<'a> {
         CreateContactUseCase { contact_repository }
     }
 
-    pub async fn execute(&self, request: CreateContactRequest) -> Result<ContactResponse, DomainError> {
+    pub async fn execute(
+        &self,
+        request: CreateContactRequest,
+    ) -> Result<ContactResponse, DomainError> {
         let contact_type = ContactType::from_str(&request.contact_type)
             .map_err(|e| DomainError::ValidationError(e))?;
         let status = ContactStatus::from_str(&request.status)
@@ -48,16 +51,26 @@ impl<'a> UpdateContactUseCase<'a> {
         UpdateContactUseCase { contact_repository }
     }
 
-    pub async fn execute(&self, request: UpdateContactRequest) -> Result<ContactResponse, DomainError> {
+    pub async fn execute(
+        &self,
+        request: UpdateContactRequest,
+    ) -> Result<ContactResponse, DomainError> {
         let contact_id = ContactId::from_string(&request.id)
             .map_err(|e| DomainError::ValidationError(format!("Invalid contact ID: {}", e)))?;
 
-        let mut contact = self.contact_repository.find_by_id(&contact_id).await?
-            .ok_or_else(|| DomainError::NotFound(format!("Contact with ID {} not found", request.id)))?;
+        let mut contact = self
+            .contact_repository
+            .find_by_id(&contact_id)
+            .await?
+            .ok_or_else(|| {
+                DomainError::NotFound(format!("Contact with ID {} not found", request.id))
+            })?;
 
         // Check ETag for optimistic concurrency control
         if contact.etag != request.etag {
-            return Err(DomainError::Conflict("ETag mismatch - contact was modified by another user".to_string()));
+            return Err(DomainError::Conflict(
+                "ETag mismatch - contact was modified by another user".to_string(),
+            ));
         }
 
         if let Some(full_name) = request.full_name {
@@ -115,7 +128,9 @@ impl<'a> DeleteContactUseCase<'a> {
             .map_err(|e| DomainError::ValidationError(format!("Invalid contact ID: {}", e)))?;
 
         // Check if contact exists
-        self.contact_repository.find_by_id(&contact_id).await?
+        self.contact_repository
+            .find_by_id(&contact_id)
+            .await?
             .ok_or_else(|| DomainError::NotFound(format!("Contact with ID {} not found", id)))?;
 
         self.contact_repository.delete(&contact_id).await?;
@@ -132,17 +147,18 @@ impl<'a> GetContactsUseCase<'a> {
         GetContactsUseCase { contact_repository }
     }
 
-    pub async fn execute(&self, request: ContactSearchRequest) -> Result<ContactSearchResponse, DomainError> {
+    pub async fn execute(
+        &self,
+        request: ContactSearchRequest,
+    ) -> Result<ContactSearchResponse, DomainError> {
         let contact_type = if let Some(ct) = request.contact_type {
-            Some(ContactType::from_str(&ct)
-                .map_err(|e| DomainError::ValidationError(e))?)
+            Some(ContactType::from_str(&ct).map_err(|e| DomainError::ValidationError(e))?)
         } else {
             None
         };
 
         let status = if let Some(s) = request.status {
-            Some(ContactStatus::from_str(&s)
-                .map_err(|e| DomainError::ValidationError(e))?)
+            Some(ContactStatus::from_str(&s).map_err(|e| DomainError::ValidationError(e))?)
         } else {
             None
         };
@@ -161,7 +177,11 @@ impl<'a> GetContactsUseCase<'a> {
         };
 
         let result = self.contact_repository.find_all(&criteria).await?;
-        let items = result.items.into_iter().map(|contact| contact.into()).collect();
+        let items = result
+            .items
+            .into_iter()
+            .map(|contact| contact.into())
+            .collect();
 
         Ok(ContactSearchResponse {
             items,
@@ -170,7 +190,10 @@ impl<'a> GetContactsUseCase<'a> {
     }
 
     pub async fn execute_by_id(&self, id: &ContactId) -> Result<ContactResponse, DomainError> {
-        let contact = self.contact_repository.find_by_id(id).await?
+        let contact = self
+            .contact_repository
+            .find_by_id(id)
+            .await?
             .ok_or_else(|| DomainError::NotFound(format!("Contact with ID {} not found", id)))?;
         Ok(contact.into())
     }

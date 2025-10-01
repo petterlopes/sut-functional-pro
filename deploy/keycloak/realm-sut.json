@@ -1,56 +1,286 @@
 {
   "realm": "sut",
   "enabled": true,
+  "displayName": "SUT System",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>SUT</span></div>",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": true,
+  "rememberMe": false,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "defaultSignatureAlgorithm": "RS256",
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "accessTokenLifespan": 900,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "ssoSessionIdleTimeoutRememberMe": 0,
+  "ssoSessionMaxLifespanRememberMe": 0,
+  "offlineSessionIdleTimeout": 2592000,
+  "offlineSessionMaxLifespanEnabled": false,
+  "offlineSessionMaxLifespan": 5184000,
+  "clientSessionIdleTimeout": 0,
+  "clientSessionMaxLifespan": 0,
+  "clientOfflineSessionIdleTimeout": 0,
+  "clientOfflineSessionMaxLifespan": 0,
+  "accessCodeLifespan": 60,
+  "accessCodeLifespanUserAction": 300,
+  "accessCodeLifespanLogin": 1800,
+  "actionTokenGeneratedByAdminLifespan": 43200,
+  "actionTokenGeneratedByUserLifespan": 300,
+  "oauth2DeviceCodeLifespan": 600,
+  "oauth2DevicePollingInterval": 5,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["pt-BR", "en"],
+  "defaultLocale": "pt-BR",
   "clients": [
     {
       "clientId": "sut-frontend",
+      "name": "SUT Frontend Application",
+      "description": "Frontend application for SUT system",
+      "enabled": true,
       "publicClient": true,
       "redirectUris": [
-        "http://localhost:5173/*"
+        "http://localhost:5173/*",
+        "https://localhost:5173/*"
       ],
       "webOrigins": [
-        "*"
+        "http://localhost:5173",
+        "https://localhost:5173"
       ],
       "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
       "attributes": {
-        "pkce.code.challenge.method": "S256"
-      }
+        "pkce.code.challenge.method": "S256",
+        "access.token.lifespan": "900",
+        "client.session.idle.timeout": "1800",
+        "client.session.max.lifespan": "36000",
+        "client.offline.session.idle.timeout": "2592000",
+        "client.offline.session.max.lifespan": "5184000",
+        "saml.assertion.signature": "false",
+        "saml.force.post.binding": "false",
+        "saml.multivalued.roles": "false",
+        "saml.encrypt": "false",
+        "saml.server.signature": "false",
+        "saml.server.signature.keyinfo.ext": "false",
+        "exclude.session.state.from.auth.response": "false",
+        "saml_force_name_id_format": "false",
+        "saml.client.signature": "false",
+        "tls.client.certificate.bound.access.tokens": "false",
+        "saml.authnstatement": "false",
+        "display.on.consent.screen": "false",
+        "saml.onetimeuse.condition": "false"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": -1,
+      "defaultClientScopes": [
+        "web-origins",
+        "role_list",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "sut-backend",
+      "name": "SUT Backend API",
+      "description": "Backend API for SUT system",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "access.token.lifespan": "900",
+        "client.session.idle.timeout": "1800",
+        "client.session.max.lifespan": "36000"
+      },
+      "authenticationFlowBindingOverrides": {},
+      "fullScopeAllowed": false,
+      "nodeReRegistrationTimeout": -1,
+      "defaultClientScopes": [
+        "web-origins",
+        "role_list",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
     }
   ],
   "roles": {
     "realm": [
       {
-        "name": "directory.read"
+        "name": "admin",
+        "description": "Administrator role with full access"
       },
       {
-        "name": "directory.write"
+        "name": "user",
+        "description": "Standard user role"
       },
       {
-        "name": "directory.merge"
+        "name": "directory.read",
+        "description": "Read access to directory"
       },
       {
-        "name": "directory.pii.read"
+        "name": "directory.write",
+        "description": "Write access to directory"
+      },
+      {
+        "name": "directory.merge",
+        "description": "Merge access to directory"
+      },
+      {
+        "name": "directory.pii.read",
+        "description": "Read access to PII data"
+      },
+      {
+        "name": "audit.read",
+        "description": "Read access to audit logs"
       }
     ]
   },
   "users": [
     {
-      "username": "dev",
+      "username": "admin",
+      "email": "admin@sut.local",
+      "firstName": "System",
+      "lastName": "Administrator",
       "enabled": true,
+      "emailVerified": true,
       "credentials": [
         {
           "type": "password",
-          "value": "dev",
+          "value": "Admin@SUT2024!",
           "temporary": false
         }
       ],
       "realmRoles": [
+        "admin",
+        "directory.read",
+        "directory.write",
+        "directory.merge",
+        "directory.pii.read",
+        "audit.read"
+      ],
+      "clientRoles": {
+        "sut-frontend": ["admin"],
+        "sut-backend": ["admin"]
+      }
+    },
+    {
+      "username": "user",
+      "email": "user@sut.local",
+      "firstName": "Standard",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "User@SUT2024!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user",
+        "directory.read"
+      ],
+      "clientRoles": {
+        "sut-frontend": ["user"],
+        "sut-backend": ["user"]
+      }
+    },
+    {
+      "username": "dev",
+      "email": "dev@sut.local",
+      "firstName": "Developer",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Dev@SUT2024!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user",
         "directory.read",
         "directory.write",
         "directory.merge",
         "directory.pii.read"
-      ]
+      ],
+      "clientRoles": {
+        "sut-frontend": ["user"],
+        "sut-backend": ["user"]
+      }
     }
-  ]
+  ],
+  "passwordPolicy": "length(12) and digits(2) and lowerCase(2) and upperCase(2) and specialChars(2) and notUsername",
+  "otpPolicyType": "totp",
+  "otpPolicyAlgorithm": "HmacSHA1",
+  "otpPolicyInitialCounter": 0,
+  "otpPolicyDigits": 6,
+  "otpPolicyLookAheadWindow": 1,
+  "otpPolicyPeriod": 30,
+  "otpSupportedApplications": [
+    "FreeOTP",
+    "Google Authenticator"
+  ],
+  "webAuthnPolicyRpEntityName": "SUT System",
+  "webAuthnPolicySignatureAlgorithms": [
+    "ES256"
+  ],
+  "webAuthnPolicyRpId": "",
+  "webAuthnPolicyAttestationConveyancePreference": "not specified",
+  "webAuthnPolicyAuthenticatorAttachment": "not specified",
+  "webAuthnPolicyRequireResidentKey": "not specified",
+  "webAuthnPolicyUserVerificationRequirement": "not specified",
+  "webAuthnPolicyCreateTimeout": 0,
+  "webAuthnPolicyAvoidSameAuthenticatorRegister": false,
+  "webAuthnPolicyAcceptableAaguids": [],
+  "webAuthnPolicyPasswordlessRpEntityName": "SUT System",
+  "webAuthnPolicyPasswordlessSignatureAlgorithms": [
+    "ES256"
+  ],
+  "webAuthnPolicyPasswordlessRpId": "",
+  "webAuthnPolicyPasswordlessAttestationConveyancePreference": "not specified",
+  "webAuthnPolicyPasswordlessAuthenticatorAttachment": "not specified",
+  "webAuthnPolicyPasswordlessRequireResidentKey": "not specified",
+  "webAuthnPolicyPasswordlessUserVerificationRequirement": "not specified",
+  "webAuthnPolicyPasswordlessCreateTimeout": 0,
+  "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister": false,
+  "webAuthnPolicyPasswordlessAcceptableAaguids": []
 }
