@@ -45,15 +45,15 @@ pub fn routes() -> Router<Arc<crate::AppState>> {
         )
         // ===== ROTAS DE RECURSO INDIVIDUAL =====
         .route(
-            "/v1/org-units/:id",
-            get(get_org_unit) // GET /v1/org-units/:id - Buscar unidade organizacional por ID
-                .patch(update_org_unit) // PATCH /v1/org-units/:id - Atualizar unidade organizacional
-                .delete(delete_org_unit), // DELETE /v1/org-units/:id - Deletar unidade organizacional
+            "/v1/org-units/{id}",
+            get(get_org_unit) // GET /v1/org-units/{id} - Buscar unidade organizacional por ID
+                .patch(update_org_unit) // PATCH /v1/org-units/{id} - Atualizar unidade organizacional
+                .delete(delete_org_unit), // DELETE /v1/org-units/{id} - Deletar unidade organizacional
         )
         // ===== ROTAS DE HIERARQUIA =====
         .route(
-            "/v1/org-units/:id/hierarchy",
-            get(get_org_unit_hierarchy), // GET /v1/org-units/:id/hierarchy - Hierarquia da unidade
+            "/v1/org-units/{id}/hierarchy",
+            get(get_org_unit_hierarchy), // GET /v1/org-units/{id}/hierarchy - Hierarquia da unidade
         )
 }
 

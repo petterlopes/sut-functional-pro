@@ -45,23 +45,23 @@ pub fn routes() -> Router<Arc<crate::AppState>> {
         )
         // ===== ROTAS DE RECURSO INDIVIDUAL =====
         .route(
-            "/v1/users/:id",
-            get(get_user) // GET /v1/users/:id - Buscar usuário por ID
-                .patch(update_user) // PATCH /v1/users/:id - Atualizar usuário
-                .delete(delete_user), // DELETE /v1/users/:id - Deletar usuário
+            "/v1/users/{id}",
+            get(get_user) // GET /v1/users/{id} - Buscar usuário por ID
+                .patch(update_user) // PATCH /v1/users/{id} - Atualizar usuário
+                .delete(delete_user), // DELETE /v1/users/{id} - Deletar usuário
         )
         // ===== ROTAS DE BUSCA ESPECÍFICA =====
         .route(
-            "/v1/users/by-username/:username",
-            get(get_user_by_username), // GET /v1/users/by-username/:username - Buscar por username
+            "/v1/users/by-username/{username}",
+            get(get_user_by_username), // GET /v1/users/by-username/{username} - Buscar por username
         )
         .route(
-            "/v1/users/by-email/:email",
-            get(get_user_by_email), // GET /v1/users/by-email/:email - Buscar por email
+            "/v1/users/by-email/{email}",
+            get(get_user_by_email), // GET /v1/users/by-email/{email} - Buscar por email
         )
         .route(
-            "/v1/users/by-role/:role",
-            get(get_users_by_role), // GET /v1/users/by-role/:role - Buscar por role
+            "/v1/users/by-role/{role}",
+            get(get_users_by_role), // GET /v1/users/by-role/{role} - Buscar por role
         )
 }
 

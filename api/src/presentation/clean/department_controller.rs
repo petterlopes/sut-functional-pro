@@ -45,10 +45,10 @@ pub fn routes() -> Router<Arc<crate::AppState>> {
         )
         // ===== ROTAS DE RECURSO INDIVIDUAL =====
         .route(
-            "/v1/departments/:id",
-            get(get_department) // GET /v1/departments/:id - Buscar departamento por ID
-                .patch(update_department) // PATCH /v1/departments/:id - Atualizar departamento
-                .delete(delete_department), // DELETE /v1/departments/:id - Deletar departamento
+            "/v1/departments/{id}",
+            get(get_department) // GET /v1/departments/{id} - Buscar departamento por ID
+                .patch(update_department) // PATCH /v1/departments/{id} - Atualizar departamento
+                .delete(delete_department), // DELETE /v1/departments/{id} - Deletar departamento
         )
         // ===== ROTAS DE ESTATÍSTICAS =====
         .route(
@@ -57,8 +57,8 @@ pub fn routes() -> Router<Arc<crate::AppState>> {
         )
         // ===== ROTAS DE RELACIONAMENTO =====
         .route(
-            "/v1/departments/by-unit/:unit_id",
-            get(get_departments_by_unit), // GET /v1/departments/by-unit/:unit_id - Departamentos por unidade
+            "/v1/departments/by-unit/{unit_id}",
+            get(get_departments_by_unit), // GET /v1/departments/by-unit/{unit_id} - Departamentos por unidade
         )
 }
 

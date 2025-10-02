@@ -201,7 +201,7 @@ pub fn webhook_routes() -> Router<Arc<AppState>> {
     Router::new()
         .route("/vault-alerts", post(vault_webhook_handler))
         .route("/keycloak-events", post(keycloak_webhook_handler))
-        .route("/:service", post(generic_webhook_handler))
+        .route("/{service}", post(generic_webhook_handler))
 }
 
 #[cfg(test)]

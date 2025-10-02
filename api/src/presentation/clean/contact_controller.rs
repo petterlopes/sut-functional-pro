@@ -45,10 +45,10 @@ pub fn routes() -> Router<Arc<crate::AppState>> {
         )
         // ===== ROTAS DE RECURSO INDIVIDUAL =====
         .route(
-            "/v1/contacts/:id",
-            get(get_contact) // GET /v1/contacts/:id - Buscar contato por ID
-                .patch(update_contact) // PATCH /v1/contacts/:id - Atualizar contato
-                .delete(delete_contact), // DELETE /v1/contacts/:id - Deletar contato
+            "/v1/contacts/{id}",
+            get(get_contact) // GET /v1/contacts/{id} - Buscar contato por ID
+                .patch(update_contact) // PATCH /v1/contacts/{id} - Atualizar contato
+                .delete(delete_contact), // DELETE /v1/contacts/{id} - Deletar contato
         )
         // ===== ROTAS DE ESTATÍSTICAS =====
         .route(

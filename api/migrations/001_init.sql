@@ -1,9 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS unaccent;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-CREATE OR REPLACE FUNCTION immutable_unaccent(text) RETURNS text AS $$
-  SELECT unaccent('public.unaccent', $1);
+-- Simple text normalization function
+CREATE OR REPLACE FUNCTION normalize_text(input_text text) RETURNS text AS $$
+  SELECT LOWER(TRIM(input_text));
 $$ LANGUAGE sql IMMUTABLE;
 
 CREATE TABLE IF NOT EXISTS org_units(
@@ -11,14 +11,14 @@ CREATE TABLE IF NOT EXISTS org_units(
   name TEXT NOT NULL,
   parent_id UUID NULL REFERENCES org_units(id)
 );
-CREATE INDEX IF NOT EXISTS org_units_name_idx ON org_units (LOWER(immutable_unaccent(name)));
+CREATE INDEX IF NOT EXISTS org_units_name_idx ON org_units (normalize_text(name));
 
 CREATE TABLE IF NOT EXISTS departments(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   unit_id UUID NOT NULL REFERENCES org_units(id),
   name TEXT NOT NULL
 );
-CREATE UNIQUE INDEX IF NOT EXISTS departments_ux ON departments(unit_id, LOWER(immutable_unaccent(name)));
+CREATE UNIQUE INDEX IF NOT EXISTS departments_ux ON departments(unit_id, LOWER(name));
 
 CREATE TABLE IF NOT EXISTS contacts(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -106,10 +106,10 @@ CREATE TABLE IF NOT EXISTS audit_events(
 );
 CREATE INDEX IF NOT EXISTS audit_idx ON audit_events(entity_type, entity_id, at DESC);
 
--- FTS trigger
+-- FTS trigger with simple text normalization
 CREATE OR REPLACE FUNCTION update_search_vector() RETURNS trigger AS $$
 BEGIN
-  NEW.full_name_norm := LOWER(immutable_unaccent(coalesce(NEW.full_name,'')));
+  NEW.full_name_norm := normalize_text(coalesce(NEW.full_name,''));
   NEW.search_vector := setweight(to_tsvector('simple', NEW.full_name_norm), 'A');
   RETURN NEW;
 END
@@ -119,7 +119,6 @@ DROP TRIGGER IF EXISTS contacts_search_vector_tgr ON contacts;
 CREATE TRIGGER contacts_search_vector_tgr
 BEFORE INSERT OR UPDATE OF full_name ON contacts
 FOR EACH ROW EXECUTE FUNCTION update_search_vector();
-
 
 -- SEEDS
 INSERT INTO org_units (id, name) VALUES
@@ -170,4 +169,3 @@ CREATE TABLE IF NOT EXISTS webhook_receipts(
   received_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS webhook_receipts_ux ON webhook_receipts(source, nonce);
-

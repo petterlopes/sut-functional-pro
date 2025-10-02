@@ -15,7 +15,7 @@ services:
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sut -d sut"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -29,15 +29,20 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: Admin@Keycloak2024!
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak?sslmode=disable
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: Keycloak@DB2024!
+      KC_DB_SCHEMA: keycloak
       KC_HOSTNAME_STRICT: false
       KC_HTTP_ENABLED: true
       KC_PROXY: edge
       KC_HEALTH_ENABLED: true
       KC_METRICS_ENABLED: true
       KC_LOG_LEVEL: INFO
+      KC_TRANSACTION_XA_ENABLED: false
+      KC_DB_POOL_INITIAL_SIZE: 5
+      KC_DB_POOL_MIN_SIZE: 5
+      KC_DB_POOL_MAX_SIZE: 20
     volumes:
       - ./keycloak/realm-sut.json:/opt/keycloak/data/import/realm-sut.json:ro
       - ./keycloak/initial_users.json:/opt/keycloak/data/import/initial_users.json:ro
@@ -100,7 +105,7 @@ services:
     image: hashicorp/vault:1.18
     container_name: sut-vault-setup
     entrypoint: ["/bin/sh", "-lc"]
-    command: "/setup.sh"
+    command: "sh /setup.sh"
     environment: 
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN: dev-root-token
@@ -140,7 +145,7 @@ services:
     build: { context: .., dockerfile: api/Dockerfile }
     environment:
       BIND: 0.0.0.0:8080
-      PG_DSN: postgres://sut:sut@postgres:5432/sut
+      PG_DSN: postgres://sut:Sut@Postgres2024!@postgres:5432/sut
       KEYCLOAK_ISSUER: http://keycloak:8080/realms/sut
       KEYCLOAK_JWKS: http://keycloak:8080/realms/sut/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: sut-frontend,account
@@ -160,7 +165,7 @@ services:
   frontend:
     image: node:22-alpine
     working_dir: /app
-    command: bash -lc "npm i -g pnpm && pnpm i && pnpm run gen:sdk && pnpm dev --host"
+    command: sh -c "npm i -g pnpm && pnpm i && pnpm run gen:sdk && pnpm dev --host"
     volumes:
       - ../frontend:/app
       - /app/node_modules
