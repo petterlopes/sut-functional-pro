@@ -77,11 +77,18 @@ docker compose -f docker-compose.dev.yml up --build
 - 🔧 **API**: http://localhost:8080
 - 🔐 **Keycloak**: http://localhost:8081 (admin/admin)
 - 📊 **Grafana**: http://localhost:3000 (admin/admin)
+- 📈 **Prometheus**: http://localhost:9090
 - 🔒 **Vault**: http://localhost:8200 (token: root)
 
 3. **Usuários de desenvolvimento:**
 - `admin/admin` - Administrador do sistema
 - `dev/dev` - Usuário de desenvolvimento
+
+### ⚠️ Notas Importantes
+
+- **Função `unaccent` removida**: O projeto foi refatorado para não depender mais da função PostgreSQL `unaccent`. Agora usa uma função `normalize_text` customizada.
+- **Autenticação de métricas**: O endpoint `/metrics` requer autenticação Basic Auth com credenciais `metrics:dev-metrics-token`.
+- **Versões corrigidas**: Todas as dependências do frontend foram atualizadas para versões compatíveis.
 
 ## 📁 Estrutura do Projeto
 
@@ -252,9 +259,10 @@ Observa??es importantes:
 ## 📊 Observabilidade
 
 ### Métricas
-- **Prometheus**: Coleta de métricas
+- **Prometheus**: Coleta de métricas com autenticação Basic Auth
 - **Grafana**: Dashboards e visualizações
-- **Endpoint**: `/metrics` (requer header `X-Metrics-Token` com `METRICS_TOKEN`)
+- **Endpoint**: `/metrics` (requer Basic Auth: `metrics:dev-metrics-token` ou header `X-Metrics-Token`)
+- **Configuração**: Prometheus configurado para usar Basic Auth automaticamente
 
 ### Logs
 - **Structured Logging**: Logs estruturados em JSON
@@ -346,11 +354,19 @@ A API segue a especificação OpenAPI 3.1.0. A documentação está disponível 
 - Verifique se o PostgreSQL está rodando
 - Confirme as variáveis de ambiente
 - Verifique os logs: `docker logs deploy-api-1`
+- **Erro de migração**: Se houver erro com função `unaccent`, o projeto foi refatorado para usar `normalize_text`
 
 #### Frontend não carrega
 - Verifique se o Keycloak está acessível
 - Confirme as variáveis `VITE_*`
 - Verifique o console do navegador
+- **Erro de dependências**: Todas as versões foram corrigidas para compatibilidade
+
+#### Prometheus não coleta métricas
+- Verifique se a API está rodando
+- Confirme que o endpoint `/metrics` está acessível
+- Teste com: `curl -u metrics:dev-metrics-token http://localhost:8080/metrics`
+- Verifique a configuração do Prometheus em `deploy/prometheus.yml`
 
 #### Autenticação falha
 - Verifique a configuração do Keycloak

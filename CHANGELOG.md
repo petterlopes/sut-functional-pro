@@ -128,6 +128,58 @@ e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR
 
 ---
 
+## [1.0.1] - 2025-10-02
+
+### 🐛 Correções Críticas
+
+#### ✨ Refatoração da Função `unaccent`
+- **Removida dependência da função PostgreSQL `unaccent`**
+- Implementada função `normalize_text` customizada usando `LOWER(TRIM(input_text))`
+- Atualizada migração `api/migrations/001_init.sql` para usar a nova função
+- Corrigidos índices e triggers para usar `normalize_text`
+- Removidas referências ao `unaccent` em todos os scripts SQL
+
+#### 🔧 Correções de Roteamento da API
+- Corrigido formato de rotas nos controllers:
+  - `contact_controller.rs`: `:id` → `{id}`
+  - `user_controller.rs`: `:id` → `{id}`, `:username` → `{username}`, `:email` → `{email}`, `:role` → `{role}`
+  - `org_unit_controller.rs`: `:id` → `{id}`
+  - `department_controller.rs`: `:id` → `{id}`, `:unit_id` → `{unit_id}`
+  - `webhooks.rs`: `:service` → `{service}`
+
+#### 📊 Correção do Prometheus
+- **Implementada autenticação Basic Auth para endpoint `/metrics`**
+- API agora aceita tanto Basic Auth (`metrics:dev-metrics-token`) quanto header `X-Metrics-Token`
+- Atualizada configuração do Prometheus em `deploy/prometheus.yml` para usar Basic Auth
+- Prometheus agora consegue coletar métricas corretamente
+
+#### 📦 Correções de Dependências do Frontend
+- Corrigidas versões incompatíveis no `frontend/package.json`:
+  - `@mui/icons-material`: `^7.4.0` → `^7.3.3`
+  - `@mui/material`: `^7.4.0` → `^7.3.3`
+  - `@mui/x-charts`: `^8.15.0` → `^8.13.1`
+  - `@mui/x-data-grid`: `^8.15.0` → `^8.13.1`
+  - `@mui/x-date-pickers`: `^8.15.0` → `^8.12.0`
+  - `@tanstack/react-query`: `^5.95.0` → `^5.90.2`
+  - `axios`: `^1.13.0` → `^1.12.2`
+  - `recharts`: `^3.3.0` → `^3.2.1`
+  - `typescript`: `5.7.0` → `5.9.3`
+  - `vite`: `5.5.0` → `5.4.20`
+
+#### 📝 Documentação Atualizada
+- Atualizado README.md com informações sobre as correções
+- Adicionadas notas sobre remoção da função `unaccent`
+- Documentada nova autenticação do endpoint `/metrics`
+- Atualizada seção de troubleshooting com soluções para problemas resolvidos
+
+### 🔧 Melhorias Técnicas
+- Sistema agora funciona completamente sem dependência da função `unaccent`
+- Prometheus configurado corretamente para coleta de métricas
+- Frontend com todas as dependências compatíveis
+- Todos os serviços rodando corretamente
+
+---
+
 ## [Unreleased]
 
 ### 🚧 Em Desenvolvimento

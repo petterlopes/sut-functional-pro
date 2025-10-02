@@ -5,6 +5,7 @@
 
 use std::sync::Arc; // Arc (Atomically Reference Counted) para compartilhamento seguro entre threads
 
+use base64::{Engine as _, engine::general_purpose}; // Para decodificar Basic Auth
 use axum::{
     extract::State, // Para extrair estado compartilhado das requisições
     http::{header, HeaderMap, HeaderName, HeaderValue, Method, StatusCode}, // Tipos HTTP
@@ -79,8 +80,29 @@ async fn main() -> anyhow::Result<()> {
                     // Verificação de autenticação para endpoint de métricas
                     // Protege métricas sensíveis com token de autenticação
                     if let Some(expected) = app.metrics_token.as_deref() {
-                        let provided = headers.get("X-Metrics-Token").and_then(|v| v.to_str().ok());
-                        if provided != Some(expected) {
+                        // Verifica header X-Metrics-Token
+                        let header_token = headers.get("X-Metrics-Token").and_then(|v| v.to_str().ok());
+                        
+                        // Verifica Basic Auth (username: metrics, password: token)
+                        let basic_auth_valid = headers
+                            .get("authorization")
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|auth| {
+                                if auth.starts_with("Basic ") {
+                                    let encoded = &auth[6..];
+                                    if let Ok(decoded) = general_purpose::STANDARD.decode(encoded) {
+                                        if let Ok(credentials) = String::from_utf8(decoded) {
+                                            if credentials == format!("metrics:{}", expected) {
+                                                return Some(true);
+                                            }
+                                        }
+                                    }
+                                }
+                                None
+                            })
+                            .unwrap_or(false);
+                        
+                        if header_token != Some(expected) && !basic_auth_valid {
                             return StatusCode::UNAUTHORIZED.into_response();
                         }
                     }

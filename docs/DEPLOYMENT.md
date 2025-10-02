@@ -83,7 +83,24 @@ docker compose -f docker-compose.dev.yml logs -f
 - **API**: http://localhost:8080
 - **Keycloak**: http://localhost:8081
 - **Grafana**: http://localhost:3000
+- **Prometheus**: http://localhost:9090
 - **Vault**: http://localhost:8200
+
+### 6. ⚠️ Notas Importantes sobre Correções
+
+#### Função `unaccent` Removida
+- O projeto foi refatorado para não depender mais da função PostgreSQL `unaccent`
+- Agora usa uma função `normalize_text` customizada: `LOWER(TRIM(input_text))`
+- Todas as migrações foram atualizadas para usar a nova função
+
+#### Autenticação de Métricas
+- O endpoint `/metrics` requer autenticação Basic Auth
+- Credenciais: `metrics:dev-metrics-token`
+- Prometheus configurado automaticamente para usar Basic Auth
+
+#### Dependências do Frontend Corrigidas
+- Todas as versões incompatíveis foram corrigidas
+- Frontend agora instala e executa corretamente
 
 ## 🧪 Ambiente de Testes
 
@@ -544,6 +561,9 @@ scrape_configs:
     static_configs:
       - targets: ['api:8080']
     metrics_path: '/metrics'
+    basic_auth:
+      username: 'metrics'
+      password: 'dev-metrics-token'
     scrape_interval: 5s
 
   - job_name: 'postgres'
@@ -554,6 +574,8 @@ scrape_configs:
     static_configs:
       - targets: ['nginx:80']
 ```
+
+**Nota**: O Prometheus agora usa Basic Auth para acessar o endpoint `/metrics` da API, garantindo que apenas sistemas autorizados possam coletar métricas.
 
 ### Grafana Dashboards
 ```json
@@ -695,8 +717,28 @@ docker stats
 # Verificar logs de aplicação
 docker logs api | grep ERROR
 
-# Verificar métricas
-curl http://localhost:8080/metrics
+# Verificar métricas (com autenticação)
+curl -u metrics:dev-metrics-token http://localhost:8080/metrics
+```
+
+#### Problemas com função `unaccent`
+```bash
+# Se houver erro relacionado à função unaccent, o projeto foi refatorado
+# Verificar se a migração foi executada corretamente
+docker logs deploy-api-1 | grep migration
+
+# A função normalize_text substitui o unaccent
+docker exec deploy-postgres-1 psql -U sut -d sut -c "SELECT normalize_text('Teste');"
+```
+
+#### Problemas de dependências do frontend
+```bash
+# Verificar logs do frontend
+docker logs deploy-frontend-1
+
+# Se houver problemas de versão, todas foram corrigidas
+# Verificar se o container está rodando
+docker ps | grep frontend
 ```
 
 ### Logs Centralizados
